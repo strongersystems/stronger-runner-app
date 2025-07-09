@@ -5,85 +5,150 @@
 }
 
 body {
-  font-family: 'Arial', sans-serif;
-  background: #1a1a1a;
-  color: #e0e0e0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+  color: #e8eaed;
   overflow-x: hidden;
+  line-height: 1.6;
 }
 
-/* Global neon theme variables */
+/* Modern theme variables */
 :root {
-  --neon-cyan: #00ffcc;
-  --neon-blue: #00ccff;
-  --neon-purple: #cc00ff;
-  --neon-yellow: #ffcc00;
-  --dark-bg: #1a1a1a;
-  --darker-bg: #2a2a2a;
-  --medium-bg: #3a3a3a;
-  --text-light: #e0e0e0;
-  --text-dark: #1a1a1a;
+  --primary: #fc4c02;
+  --primary-light: #ff6b35;
+  --primary-dark: #e03d00;
+  --secondary: #6366f1;
+  --accent: #10b981;
+  --success: #059669;
+  --warning: #d97706;
+  --error: #dc2626;
+  --dark-bg: #0f1419;
+  --darker-bg: #1a1f2e;
+  --medium-bg: #2d3748;
+  --light-bg: #374151;
+  --text-light: #e8eaed;
+  --text-muted: #9ca3af;
+  --text-dark: #111827;
+  --border: #374151;
+  --shadow: rgba(0, 0, 0, 0.3);
+  --glow: rgba(252, 76, 2, 0.2);
 }
 
 /* Global button styles */
 .btn {
-  background: var(--neon-cyan);
-  color: var(--text-dark);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
+  padding: 12px 24px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: bold;
-  transition: transform 0.2s, box-shadow 0.2s;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s ease;
   text-decoration: none;
   display: inline-block;
+  box-shadow: 0 2px 8px var(--shadow);
 }
 
 .btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 15px var(--neon-cyan);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--glow);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, var(--medium-bg) 0%, var(--light-bg) 100%);
+  color: var(--text-light);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: linear-gradient(135deg, var(--light-bg) 0%, var(--medium-bg) 100%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 /* Global input styles */
 input, select, textarea {
-  padding: 8px;
-  border: none;
-  border-radius: 5px;
-  background: var(--medium-bg);
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--darker-bg);
   color: var(--text-light);
-  margin-right: 5px;
+  font-size: 14px;
+  transition: all 0.2s ease;
 }
 
 input:focus, select:focus, textarea:focus {
   outline: none;
-  box-shadow: 0 0 5px var(--neon-cyan);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--glow);
 }
 
 /* Global card styles */
 .card {
-  background: var(--darker-bg);
-  padding: 20px;
-  border-radius: 10px;
-  margin-bottom: 20px;
-  box-shadow: 0 0 15px rgba(0, 255, 204, 0.2);
+  background: linear-gradient(135deg, var(--darker-bg) 0%, var(--medium-bg) 100%);
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px var(--shadow);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+}
+
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px var(--shadow);
+  border-color: var(--primary);
 }
 
 /* Animation */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { 
+    opacity: 0; 
+    transform: translateY(10px);
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0);
+  }
 }
 
 .fade-in {
-  animation: fadeIn 1s ease-in;
+  animation: fadeIn 0.5s ease-out;
 }
 
 /* Responsive design */
 @media (max-width: 768px) {
   .container {
-    padding: 10px;
+    padding: 16px;
   }
   
   .card {
-    padding: 15px;
+    padding: 20px;
   }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--darker-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--medium-bg);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--light-bg);
 } 

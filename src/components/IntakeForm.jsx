@@ -7,12 +7,9 @@ const IntakeForm = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
-  
+
   // Form state
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
     age: '',
     weight: '',
     height: '',
@@ -24,8 +21,8 @@ const IntakeForm = () => {
     unitPreference: 'metric',
     trainingIntensity: 'rpe',
     rpeFamiliarity: 'Somewhat',
-    maxHr: '',
-    restingHr: ''
+    max_hr: '',
+    resting_hr: ''
   });
 
   const [user, setUser] = useState(null);
@@ -37,6 +34,17 @@ const IntakeForm = () => {
     };
     getUser();
   }, []);
+
+  // Update mileage max when unit changes
+  const mileageMax = formData.unitPreference === 'metric' ? 160 : 100;
+  const mileageLabel = formData.unitPreference === 'metric' ? 'km' : 'miles';
+
+  // If current mileage is above new max, clamp it
+  useEffect(() => {
+    if (formData.weeklyMileage > mileageMax) {
+      setFormData(prev => ({ ...prev, weeklyMileage: mileageMax }));
+    }
+  }, [formData.unitPreference]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -78,9 +86,9 @@ const IntakeForm = () => {
 
       if (error) throw error;
 
-      setSuccess('Form submitted successfully!');
+      setSuccess('Training plan created successfully!');
       setTimeout(() => {
-        navigate('/predictor');
+        navigate('/dashboard');
       }, 2000);
     } catch (error) {
       setError(error.message);
@@ -89,96 +97,55 @@ const IntakeForm = () => {
     }
   };
 
+  // Karvonen method for HR zones
   const renderHrZones = () => {
-    const max = parseInt(formData.maxHr);
-    if (!max || max < 100) return null;
-
+    const max = parseInt(formData.max_hr);
+    const rest = parseInt(formData.resting_hr);
+    if (!max || !rest || max <= rest) return null;
+    const hrr = max - rest;
+    // Standard running zones (percentages)
     const zones = {
-      z1: [Math.round(max * 0.5), Math.round(max * 0.6)],
-      z2: [Math.round(max * 0.6), Math.round(max * 0.7)],
-      z3: [Math.round(max * 0.7), Math.round(max * 0.8)],
-      z4: [Math.round(max * 0.8), Math.round(max * 0.9)],
-      z5: [Math.round(max * 0.9), max]
+      z1: [0.5, 0.6],
+      z2: [0.6, 0.7],
+      z3: [0.7, 0.8],
+      z4: [0.8, 0.9],
+      z5: [0.9, 1.0]
     };
-
     return (
       <div style={{ marginTop: '15px' }}>
         <div style={{
           height: '40px',
           display: 'flex',
-          borderRadius: '6px',
+          borderRadius: '8px',
           overflow: 'hidden'
         }}>
-          <div style={{
-            flex: 1,
-            background: 'linear-gradient(to right, #a8e6cf, #2ecc71)',
-            color: '#000',
-            textAlign: 'center',
-            fontSize: '12px',
-            lineHeight: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'column'
-          }}>
-            Z1: {zones.z1[0]}-{zones.z1[1]} bpm
-          </div>
-          <div style={{
-            flex: 1,
-            background: 'linear-gradient(to right, #74b9ff, #3498db)',
-            color: '#fff',
-            textAlign: 'center',
-            fontSize: '12px',
-            lineHeight: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'column'
-          }}>
-            Z2: {zones.z2[0]}-{zones.z2[1]} bpm
-          </div>
-          <div style={{
-            flex: 1,
-            background: 'linear-gradient(to right, #ffeaa7, #f1c40f)',
-            color: '#000',
-            textAlign: 'center',
-            fontSize: '12px',
-            lineHeight: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'column'
-          }}>
-            Z3: {zones.z3[0]}-{zones.z3[1]} bpm
-          </div>
-          <div style={{
-            flex: 1,
-            background: 'linear-gradient(to right, #fab1a0, #e67e22)',
-            color: '#fff',
-            textAlign: 'center',
-            fontSize: '12px',
-            lineHeight: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'column'
-          }}>
-            Z4: {zones.z4[0]}-{zones.z4[1]} bpm
-          </div>
-          <div style={{
-            flex: 1,
-            background: 'linear-gradient(to right, #ff7675, #e74c3c)',
-            color: '#fff',
-            textAlign: 'center',
-            fontSize: '12px',
-            lineHeight: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'column'
-          }}>
-            Z5: {zones.z5[0]}-{zones.z5[1]} bpm
-          </div>
+          {Object.entries(zones).map(([id, [low, high]], i) => {
+            const lowBpm = Math.round(hrr * low + rest);
+            const highBpm = Math.round(hrr * high + rest);
+            const colors = [
+              'linear-gradient(to right, #10b981, #059669)',
+              'linear-gradient(to right, #3b82f6, #2563eb)',
+              'linear-gradient(to right, #f59e0b, #d97706)',
+              'linear-gradient(to right, #f97316, #ea580c)',
+              'linear-gradient(to right, #ef4444, #dc2626)'
+            ];
+            return (
+              <div key={id} style={{
+                flex: 1,
+                background: colors[i],
+                color: 'white',
+                textAlign: 'center',
+                fontSize: '12px',
+                lineHeight: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column'
+              }}>
+                {id.toUpperCase()}: {lowBpm}-{highBpm} bpm
+              </div>
+            );
+          })}
         </div>
       </div>
     );
@@ -193,21 +160,23 @@ const IntakeForm = () => {
       <div className="card">
         <h1 style={{ 
           textAlign: 'center', 
-          color: 'var(--neon-cyan)', 
-          textShadow: '0 0 10px var(--neon-cyan)',
+          color: 'var(--text-light)', 
+          fontSize: '28px',
+          fontWeight: '700',
           marginBottom: '30px'
         }}>
-          Marathon Training Intake Form
+          Create Training Plan
         </h1>
 
         {error && (
           <div style={{ 
-            background: 'rgba(255, 0, 0, 0.1)', 
-            color: '#ff6b6b', 
-            padding: '10px', 
-            borderRadius: '5px', 
+            background: 'rgba(220, 38, 38, 0.1)', 
+            color: 'var(--error)', 
+            padding: '12px', 
+            borderRadius: '8px', 
             marginBottom: '20px',
-            border: '1px solid #ff6b6b'
+            border: '1px solid var(--error)',
+            fontSize: '14px'
           }}>
             {error}
           </div>
@@ -215,81 +184,50 @@ const IntakeForm = () => {
 
         {success && (
           <div style={{ 
-            background: 'rgba(0, 255, 0, 0.1)', 
-            color: '#51cf66', 
-            padding: '10px', 
-            borderRadius: '5px', 
+            background: 'rgba(5, 150, 105, 0.1)', 
+            color: 'var(--success)', 
+            padding: '12px', 
+            borderRadius: '8px', 
             marginBottom: '20px',
-            border: '1px solid #51cf66'
+            border: '1px solid var(--success)',
+            fontSize: '14px'
           }}>
             {success}
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          {/* Personal Information */}
+          {/* Unit Preference - moved to top */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ 
+              display: 'block', 
+              color: 'var(--text-light)', 
+              marginBottom: '8px',
+              fontWeight: '500'
+            }}>
+              Unit Preference
+            </label>
+            <select
+              name="unitPreference"
+              value={formData.unitPreference}
+              onChange={handleInputChange}
+              style={{ width: '100%' }}
+            >
+              <option value="metric">Metric (KM, min/km)</option>
+              <option value="imperial">Imperial (Miles, min/mile)</option>
+            </select>
+          </div>
+
+          {/* Personal Information (user details removed) */}
           <div style={{ marginBottom: '30px' }}>
-            <h3 style={{ color: 'var(--neon-cyan)', marginBottom: '15px' }}>Personal Information</h3>
-            
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ 
-                display: 'block', 
-                color: 'var(--neon-cyan)', 
-                marginBottom: '5px' 
-              }}>
-                Name
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                required
-                style={{ width: '100%' }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ 
-                display: 'block', 
-                color: 'var(--neon-cyan)', 
-                marginBottom: '5px' 
-              }}>
-                Email
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                required
-                style={{ width: '100%' }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ 
-                display: 'block', 
-                color: 'var(--neon-cyan)', 
-                marginBottom: '5px' 
-              }}>
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleInputChange}
-                style={{ width: '100%' }}
-              />
-            </div>
-
+            <h3 style={{ color: 'var(--text-light)', marginBottom: '15px', fontSize: '20px', fontWeight: '600' }}>Personal Information</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
               <div>
                 <label style={{ 
                   display: 'block', 
-                  color: 'var(--neon-cyan)', 
-                  marginBottom: '5px' 
+                  color: 'var(--text-light)', 
+                  marginBottom: '8px',
+                  fontWeight: '500'
                 }}>
                   Age
                 </label>
@@ -304,8 +242,9 @@ const IntakeForm = () => {
               <div>
                 <label style={{ 
                   display: 'block', 
-                  color: 'var(--neon-cyan)', 
-                  marginBottom: '5px' 
+                  color: 'var(--text-light)', 
+                  marginBottom: '8px',
+                  fontWeight: '500'
                 }}>
                   Weight ({formData.unitPreference === 'metric' ? 'kg' : 'lbs'})
                 </label>
@@ -320,8 +259,9 @@ const IntakeForm = () => {
               <div>
                 <label style={{ 
                   display: 'block', 
-                  color: 'var(--neon-cyan)', 
-                  marginBottom: '5px' 
+                  color: 'var(--text-light)', 
+                  marginBottom: '8px',
+                  fontWeight: '500'
                 }}>
                   Height ({formData.unitPreference === 'metric' ? 'cm' : 'inches'})
                 </label>
@@ -338,14 +278,14 @@ const IntakeForm = () => {
 
           {/* Training Information */}
           <div style={{ marginBottom: '30px' }}>
-            <h3 style={{ color: 'var(--neon-cyan)', marginBottom: '15px' }}>Training Information</h3>
-            
+            <h3 style={{ color: 'var(--text-light)', marginBottom: '15px', fontSize: '20px', fontWeight: '600' }}>Training Information</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '15px' }}>
               <div>
                 <label style={{ 
                   display: 'block', 
-                  color: 'var(--neon-cyan)', 
-                  marginBottom: '5px' 
+                  color: 'var(--text-light)', 
+                  marginBottom: '8px',
+                  fontWeight: '500'
                 }}>
                   Training for
                 </label>
@@ -364,8 +304,9 @@ const IntakeForm = () => {
               <div>
                 <label style={{ 
                   display: 'block', 
-                  color: 'var(--neon-cyan)', 
-                  marginBottom: '5px' 
+                  color: 'var(--text-light)', 
+                  marginBottom: '8px',
+                  fontWeight: '500'
                 }}>
                   Plan Length
                 </label>
@@ -382,12 +323,12 @@ const IntakeForm = () => {
                 </select>
               </div>
             </div>
-
             <div style={{ marginBottom: '15px' }}>
               <label style={{ 
                 display: 'block', 
-                color: 'var(--neon-cyan)', 
-                marginBottom: '5px' 
+                color: 'var(--text-light)', 
+                marginBottom: '8px',
+                fontWeight: '500'
               }}>
                 Training History
               </label>
@@ -404,13 +345,13 @@ const IntakeForm = () => {
 
           {/* Sliders */}
           <div style={{ marginBottom: '30px' }}>
-            <h3 style={{ color: 'var(--neon-cyan)', marginBottom: '15px' }}>Training Preferences</h3>
-            
+            <h3 style={{ color: 'var(--text-light)', marginBottom: '15px', fontSize: '20px', fontWeight: '600' }}>Training Preferences</h3>
             <div style={{ marginBottom: '20px' }}>
               <label style={{ 
                 display: 'block', 
-                color: 'var(--neon-cyan)', 
-                marginBottom: '5px' 
+                color: 'var(--text-light)', 
+                marginBottom: '8px',
+                fontWeight: '500'
               }}>
                 Weekly Time Available: {formData.weeklyTime} hours
               </label>
@@ -423,54 +364,35 @@ const IntakeForm = () => {
                 style={{ width: '100%' }}
               />
             </div>
-
             <div style={{ marginBottom: '20px' }}>
               <label style={{ 
                 display: 'block', 
-                color: 'var(--neon-cyan)', 
-                marginBottom: '5px' 
+                color: 'var(--text-light)', 
+                marginBottom: '8px',
+                fontWeight: '500'
               }}>
-                Recent Weekly Average Mileage: {formData.weeklyMileage} {formData.unitPreference === 'metric' ? 'km' : 'miles'}
+                Recent Weekly Average Mileage: {formData.weeklyMileage} {mileageLabel}
               </label>
               <input
                 type="range"
                 min="5"
-                max="100"
+                max={mileageMax}
                 value={formData.weeklyMileage}
                 onChange={(e) => handleSliderChange('weeklyMileage', e.target.value)}
                 style={{ width: '100%' }}
               />
             </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ 
-                display: 'block', 
-                color: 'var(--neon-cyan)', 
-                marginBottom: '5px' 
-              }}>
-                Unit Preference
-              </label>
-              <select
-                name="unitPreference"
-                value={formData.unitPreference}
-                onChange={handleInputChange}
-                style={{ width: '100%' }}
-              >
-                <option value="metric">Metric (KM, min/km)</option>
-                <option value="imperial">Imperial (Miles, min/mile)</option>
-              </select>
-            </div>
           </div>
 
           {/* Training Intensity */}
           <div style={{ marginBottom: '30px' }}>
-            <h3 style={{ color: 'var(--neon-cyan)', marginBottom: '15px' }}>Training Intensity</h3>
-            
+            <h3 style={{ color: 'var(--text-light)', marginBottom: '15px', fontSize: '20px', fontWeight: '600' }}>Training Intensity</h3>
             <div style={{ marginBottom: '15px' }}>
               <label style={{ 
                 display: 'block', 
-                color: 'var(--neon-cyan)', 
-                marginBottom: '5px' 
+                color: 'var(--text-light)', 
+                marginBottom: '8px',
+                fontWeight: '500'
               }}>
                 Training Intensity Preference
               </label>
@@ -484,13 +406,13 @@ const IntakeForm = () => {
                 <option value="hr">Heart Rate</option>
               </select>
             </div>
-
             {formData.trainingIntensity === 'rpe' && (
               <div style={{ marginBottom: '15px' }}>
                 <label style={{ 
                   display: 'block', 
-                  color: 'var(--neon-cyan)', 
-                  marginBottom: '5px' 
+                  color: 'var(--text-light)', 
+                  marginBottom: '8px',
+                  fontWeight: '500'
                 }}>
                   RPE Familiarity
                 </label>
@@ -506,21 +428,21 @@ const IntakeForm = () => {
                 </select>
               </div>
             )}
-
             {formData.trainingIntensity === 'hr' && (
               <div>
                 <div style={{ marginBottom: '15px' }}>
                   <label style={{ 
                     display: 'block', 
-                    color: 'var(--neon-cyan)', 
-                    marginBottom: '5px' 
+                    color: 'var(--text-light)', 
+                    marginBottom: '8px',
+                    fontWeight: '500'
                   }}>
                     Max HR
                   </label>
                   <input
                     type="number"
-                    name="maxHr"
-                    value={formData.maxHr}
+                    name="max_hr"
+                    value={formData.max_hr}
                     onChange={handleInputChange}
                     style={{ width: '100%' }}
                   />
@@ -528,15 +450,16 @@ const IntakeForm = () => {
                 <div style={{ marginBottom: '15px' }}>
                   <label style={{ 
                     display: 'block', 
-                    color: 'var(--neon-cyan)', 
-                    marginBottom: '5px' 
+                    color: 'var(--text-light)', 
+                    marginBottom: '8px',
+                    fontWeight: '500'
                   }}>
                     Resting HR
                   </label>
                   <input
                     type="number"
-                    name="restingHr"
-                    value={formData.restingHr}
+                    name="resting_hr"
+                    value={formData.resting_hr}
                     onChange={handleInputChange}
                     style={{ width: '100%' }}
                   />
@@ -552,7 +475,7 @@ const IntakeForm = () => {
             disabled={loading}
             style={{ width: '100%', fontSize: '16px', padding: '15px' }}
           >
-            {loading ? 'Submitting...' : 'Submit Form'}
+            {loading ? 'Creating Plan...' : 'Create Training Plan'}
           </button>
         </form>
       </div>

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Link, useNavigate } f
 import supabase from './supabaseClient';
 import Login from './components/Login';
 import Signup from './components/Signup';
+import Dashboard from './components/Dashboard';
 import IntakeForm from './components/IntakeForm';
 import Predictor from './components/Predictor';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -38,8 +39,9 @@ const Navigation = () => {
     <nav style={{
       background: 'var(--darker-bg)',
       padding: '15px 20px',
-      boxShadow: '0 2px 10px rgba(0, 255, 204, 0.2)',
-      marginBottom: '20px'
+      boxShadow: '0 2px 10px var(--shadow)',
+      marginBottom: '20px',
+      borderBottom: '1px solid var(--border)'
     }}>
       <div style={{
         maxWidth: '1200px',
@@ -50,7 +52,7 @@ const Navigation = () => {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <Link to="/dashboard" style={{
-            color: 'var(--neon-cyan)',
+            color: 'var(--primary)',
             textDecoration: 'none',
             fontSize: '18px',
             fontWeight: 'bold'
@@ -61,28 +63,40 @@ const Navigation = () => {
             color: 'var(--text-light)',
             textDecoration: 'none',
             padding: '8px 16px',
-            borderRadius: '5px',
-            transition: 'all 0.2s'
+            borderRadius: '6px',
+            transition: 'all 0.2s',
+            fontSize: '14px'
           }}>
             Dashboard
+          </Link>
+          <Link to="/intake" style={{
+            color: 'var(--text-light)',
+            textDecoration: 'none',
+            padding: '8px 16px',
+            borderRadius: '6px',
+            transition: 'all 0.2s',
+            fontSize: '14px'
+          }}>
+            New Plan
           </Link>
           <Link to="/predictor" style={{
             color: 'var(--text-light)',
             textDecoration: 'none',
             padding: '8px 16px',
-            borderRadius: '5px',
-            transition: 'all 0.2s'
+            borderRadius: '6px',
+            transition: 'all 0.2s',
+            fontSize: '14px'
           }}>
             Predictor
           </Link>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <span style={{ color: 'var(--text-light)', fontSize: '14px' }}>
+          <span style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
             {user.email}
           </span>
           <button
             onClick={handleLogout}
-            className="btn"
+            className="btn-secondary"
             style={{ fontSize: '14px', padding: '8px 16px' }}
           >
             Logout
@@ -122,7 +136,7 @@ const App = () => {
         justifyContent: 'center', 
         alignItems: 'center', 
         height: '100vh',
-        color: 'var(--neon-cyan)',
+        color: 'var(--text-muted)',
         fontSize: '18px'
       }}>
         Loading...
@@ -138,6 +152,11 @@ const App = () => {
           <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
           <Route path="/signup" element={user ? <Navigate to="/dashboard" replace /> : <Signup />} />
           <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/intake" element={
             <ProtectedRoute>
               <IntakeForm />
             </ProtectedRoute>

@@ -61,21 +61,23 @@ const Signup = () => {
       <div className="card" style={{ maxWidth: '400px', width: '100%' }}>
         <h1 style={{ 
           textAlign: 'center', 
-          color: 'var(--neon-cyan)', 
-          textShadow: '0 0 10px var(--neon-cyan)',
+          color: 'var(--text-light)', 
+          fontSize: '28px',
+          fontWeight: '700',
           marginBottom: '30px'
         }}>
-          Sign Up
+          Create Account
         </h1>
 
         {error && (
           <div style={{ 
-            background: 'rgba(255, 0, 0, 0.1)', 
-            color: '#ff6b6b', 
-            padding: '10px', 
-            borderRadius: '5px', 
+            background: 'rgba(220, 38, 38, 0.1)', 
+            color: 'var(--error)', 
+            padding: '12px', 
+            borderRadius: '8px', 
             marginBottom: '20px',
-            border: '1px solid #ff6b6b'
+            border: '1px solid var(--error)',
+            fontSize: '14px'
           }}>
             {error}
           </div>
@@ -83,12 +85,13 @@ const Signup = () => {
 
         {success && (
           <div style={{ 
-            background: 'rgba(0, 255, 0, 0.1)', 
-            color: '#51cf66', 
-            padding: '10px', 
-            borderRadius: '5px', 
+            background: 'rgba(5, 150, 105, 0.1)', 
+            color: 'var(--success)', 
+            padding: '12px', 
+            borderRadius: '8px', 
             marginBottom: '20px',
-            border: '1px solid #51cf66'
+            border: '1px solid var(--success)',
+            fontSize: '14px'
           }}>
             {success}
           </div>
@@ -98,8 +101,9 @@ const Signup = () => {
           <div style={{ marginBottom: '20px' }}>
             <label style={{ 
               display: 'block', 
-              color: 'var(--neon-cyan)', 
-              marginBottom: '5px' 
+              color: 'var(--text-light)', 
+              marginBottom: '8px',
+              fontWeight: '500'
             }}>
               Email
             </label>
@@ -116,8 +120,9 @@ const Signup = () => {
           <div style={{ marginBottom: '20px' }}>
             <label style={{ 
               display: 'block', 
-              color: 'var(--neon-cyan)', 
-              marginBottom: '5px' 
+              color: 'var(--text-light)', 
+              marginBottom: '8px',
+              fontWeight: '500'
             }}>
               Password
             </label>
@@ -134,8 +139,9 @@ const Signup = () => {
           <div style={{ marginBottom: '20px' }}>
             <label style={{ 
               display: 'block', 
-              color: 'var(--neon-cyan)', 
-              marginBottom: '5px' 
+              color: 'var(--text-light)', 
+              marginBottom: '8px',
+              fontWeight: '500'
             }}>
               Confirm Password
             </label>
@@ -155,15 +161,15 @@ const Signup = () => {
             disabled={loading}
             style={{ width: '100%', marginBottom: '20px' }}
           >
-            {loading ? 'Creating account...' : 'Sign Up'}
+            {loading ? 'Creating account...' : 'Create Account'}
           </button>
         </form>
 
         <div style={{ textAlign: 'center' }}>
-          <p style={{ marginBottom: '10px' }}>
+          <p style={{ marginBottom: '10px', color: 'var(--text-muted)' }}>
             Already have an account?{' '}
-            <Link to="/login" style={{ color: 'var(--neon-cyan)' }}>
-              Login
+            <Link to="/login" style={{ color: 'var(--primary)', textDecoration: 'none' }}>
+              Sign in
             </Link>
           </p>
         </div>

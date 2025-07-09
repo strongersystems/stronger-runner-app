@@ -43,21 +43,23 @@ const Login = () => {
       <div className="card" style={{ maxWidth: '400px', width: '100%' }}>
         <h1 style={{ 
           textAlign: 'center', 
-          color: 'var(--neon-cyan)', 
-          textShadow: '0 0 10px var(--neon-cyan)',
+          color: 'var(--text-light)', 
+          fontSize: '28px',
+          fontWeight: '700',
           marginBottom: '30px'
         }}>
-          Login
+          Welcome Back
         </h1>
 
         {error && (
           <div style={{ 
-            background: 'rgba(255, 0, 0, 0.1)', 
-            color: '#ff6b6b', 
-            padding: '10px', 
-            borderRadius: '5px', 
+            background: 'rgba(220, 38, 38, 0.1)', 
+            color: 'var(--error)', 
+            padding: '12px', 
+            borderRadius: '8px', 
             marginBottom: '20px',
-            border: '1px solid #ff6b6b'
+            border: '1px solid var(--error)',
+            fontSize: '14px'
           }}>
             {error}
           </div>
@@ -67,8 +69,9 @@ const Login = () => {
           <div style={{ marginBottom: '20px' }}>
             <label style={{ 
               display: 'block', 
-              color: 'var(--neon-cyan)', 
-              marginBottom: '5px' 
+              color: 'var(--text-light)', 
+              marginBottom: '8px',
+              fontWeight: '500'
             }}>
               Email
             </label>
@@ -85,8 +88,9 @@ const Login = () => {
           <div style={{ marginBottom: '20px' }}>
             <label style={{ 
               display: 'block', 
-              color: 'var(--neon-cyan)', 
-              marginBottom: '5px' 
+              color: 'var(--text-light)', 
+              marginBottom: '8px',
+              fontWeight: '500'
             }}>
               Password
             </label>
@@ -106,14 +110,14 @@ const Login = () => {
             disabled={loading}
             style={{ width: '100%', marginBottom: '20px' }}
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
         <div style={{ textAlign: 'center' }}>
-          <p style={{ marginBottom: '10px' }}>
+          <p style={{ marginBottom: '10px', color: 'var(--text-muted)' }}>
             Don't have an account?{' '}
-            <Link to="/signup" style={{ color: 'var(--neon-cyan)' }}>
+            <Link to="/signup" style={{ color: 'var(--primary)', textDecoration: 'none' }}>
               Sign up
             </Link>
           </p>
