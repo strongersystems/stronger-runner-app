@@ -1,0 +1,60 @@
+<!-- Marathon Training App - Unified HTML Snapshot for Cursor Conversion -->
+<!-- Includes: Auth instructions, Intake Form, Race Predictor UI, Supabase logic (to be implemented in Cursor) -->
+
+<!-- 1. AUTH FLOW (to be converted to React + Supabase) -->
+<!-- Login / Signup handled by Supabase Auth UI -->
+<!-- Routes: /login, /signup, /dashboard, /predictor -->
+<!-- Use supabase.auth.signInWithPassword and supabase.auth.signUp -->
+
+<!-- 2. INTAKE FORM UI -->
+<!-- PASTE: Content of 'Marathon Training Form' from canvas -->
+<!-- Already includes: unit toggle, HR zones, RPE preference, sliders -->
+<!-- Save form to Supabase table 'training_intakes' with user_id -->
+
+<!-- INSERT CANVAS FORM BELOW -->
+<!-- BEGIN INTAKE FORM -->
+<!-- (Paste all the HTML from 'Marathon Training Form' here for Cursor context) -->
+
+<!-- Placeholder (you will paste from the canvas file here in Cursor or project setup) -->
+<!-- END INTAKE FORM -->
+
+<!-- 3. RACE TIME PREDICTOR UI -->
+<!-- Convert this HTML to a new component 'Predictor.jsx' with dark neon theme -->
+<!-- Must include dynamic dropdowns, predicted race times, split generator -->
+<!-- Style to match dark futuristic design across entire app -->
+
+<!-- BEGIN RACE TIME PREDICTOR -->
+<!-- PASTE: Full HTML source of your Race Predictor here -->
+<!-- Includes calculateTimes(), splitCard, paceBand, sliders, and results table -->
+<!-- END RACE TIME PREDICTOR -->
+
+<!-- 4. NAVIGATION / ROUTING -->
+<!-- Use React Router for: 
+- /login → Login.jsx
+- /signup → Signup.jsx
+- /dashboard → IntakeForm.jsx
+- /predictor → Predictor.jsx
+--> 
+
+<!-- 5. STYLING -->
+<!-- Use Tailwind or Bootstrap 5 consistently -->
+<!-- Match Predictor neon theme for the entire app -->
+<!-- Use CSS variables or global classes if needed for color consistency -->
+
+<!-- 6. SUPABASE -->
+<!-- Create supabaseClient.js with: 
+  const supabase = createClient('https://YOUR_PROJECT.supabase.co', 'YOUR_ANON_KEY');
+  export default supabase;
+-->
+<!-- Save form data with supabase.from('training_intakes').insert([...]) -->
+<!-- Auth state management: 
+  supabase.auth.onAuthStateChange((event, session) => { ... });
+--> 
+
+<!-- READY FOR CURSOR TO GENERATE: 
+✅ React Components
+✅ Supabase Integration
+✅ Auth Flow
+✅ Modern Responsive UI
+✅ Neon/Dark Theme Consistency
+-->

@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Race Time Predictor</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        h1 {
+            text-align: center;
+            color: #00ffcc;
+            text-shadow: 0 0 10px #00ffcc;
+            margin-bottom: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .input-section, .output-section {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.2);
+        }
+        .input-group {
+            margin: 10px 0;
+        }
+        .input-group label {
+            display: block;
+            color: #00ffcc;
+            margin-bottom: 5px;
+        }
+        .input-group select, .unit-select select, .slider-section select {
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            background: #3a3a3a;
+            color: #e0e0e0;
+            margin-right: 5px;
+            width: 70px;
+        }
+        .slider-section select {
+            width: 150px;
+        }
+        .split-interval select:first-child {
+            width: 100px;
+        }
+        button {
+            background: #00ffcc;
+            color: #1a1a1a;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #00ffcc;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            animation: fadeIn 1s ease-in;
+        }
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #3a3a3a;
+        }
+        th {
+            background: #00ffcc;
+            color: #1a1a1a;
+        }
+        tr:nth-child(even) {
+            background: #3a3a3a;
+        }
+        .actual { color: #ffcc00; }
+        .predicted { color: #00ccff; }
+        .range { color: #cc00ff; }
+        .split-card, .pace-band-card {
+            background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+            margin-top: 20px;
+            text-align: center;
+        }
+        .split-card h2, .pace-band-card h2 {
+            color: #00ffcc;
+            text-shadow: 0 0 5px #00ffcc;
+            margin-bottom: 15px;
+        }
+        .split-grid, .pace-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 5px;
+        }
+        .split-item, .pace-item {
+            background: #3a3a3a;
+            padding: 5px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 204, 255, 0.2);
+        }
+        .split-item h3, .pace-item h3 {
+            margin: 0 0 3px;
+            color: #00ccff;
+            font-size: 14px;
+        }
+        .split-item p, .pace-item p {
+            margin: 0;
+            font-size: 12px;
+        }
+        .unit-select {
+            margin: 10px 0;
+            text-align: center;
+        }
+        .unit-select label {
+            color: #00ffcc;
+            margin-right: 10px;
+        }
+        .slider-section {
+            margin: 15px 0;
+            text-align: center;
+        }
+        .slider-section label {
+            color: #00ffcc;
+        }
+        .split-interval {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .slider-value {
+            color: #00ccff;
+            margin-top: 5px;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Race Time Predictor</h1>
+        <div class="input-section">
+            <div class="input-group">
+                <label>1 Mile Time</label>
+                <select id="mileH"></select> :
+                <select id="mileM"></select> :
+                <select id="mileS"></select>
+            </div>
+            <div class="input-group">
+                <label>5K Time</label>
+                <select id="fiveKH"></select> :
+                <select id="fiveKM"></select> :
+                <select id="fiveKS"></select>
+            </div>
+            <div class="input-group">
+                <label>10K Time</label>
+                <select id="tenKH"></select> :
+                <select id="tenKM"></select> :
+                <select id="tenKS"></select>
+            </div>
+            <div class="input-group">
+                <label>Half Marathon Time</label>
+                <select id="halfMarathonH"></select> :
+                <select id="halfMarathonM"></select> :
+                <select id="halfMarathonS"></select>
+            </div>
+            <div class="input-group">
+                <label>Marathon Time</label>
+                <select id="marathonH"></select> :
+                <select id="marathonM"></select> :
+                <select id="marathonS"></select>
+            </div>
+            <button onclick="calculateTimes()">Calculate</button>
+        </div>
+        <div class="output-section" id="output" style="display: none;">
+            <div class="unit-select">
+                <label>Units: </label>
+                <select id="unitSelect" onchange="updateUnits()">
+                    <option value="metric">Metric (km)</option>
+                    <option value="imperial">Imperial (mi)</option>
+                </select>
+            </div>
+            <table id="resultsTable">
+                <thead>
+                    <tr>
+                        <th>Distance</th>
+                        <th>Actual Time</th>
+                        <th>Predicted Time</th>
+                        <th>Range (±3%)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <div class="split-card" id="splitCard">
+                <h2>Split Times</h2>
+                <div class="slider-section">
+                    <label>Distance: </label>
+                    <select id="distanceSelect" onchange="updateDistance(this.value)">
+                        <option value="Half Marathon">Half Marathon</option>
+                        <option value="Marathon">Marathon</option>
+                    </select>
+                </div>
+                <div class="slider-section">
+                    <label>Pace Expectation: </label>
+                    <select id="paceSelect" onchange="updatePaceRange(this.value)">
+                        <option value="0">Conservative (+3%)</option>
+                        <option value="50" selected>Predicted (0%)</option>
+                        <option value="100">Aggressive (-3%)</option>
+                    </select>
+                    <div class="slider-value" id="paceTime"></div>
+                </div>
+                <div class="slider-section">
+                    <label>Terrain: </label>
+                    <select id="terrainSelect" onchange="updateTerrain(this.value)">
+                        <option value="0">Flat (0%)</option>
+                        <option value="15">Rolling (+1.5%)</option>
+                        <option value="25">Moderate (+2.5%)</option>
+                        <option value="50">Hilly (+5%)</option>
+                        <option value="75">Mountainous (+7.5%)</option>
+                    </select>
+                </div>
+                <div class="slider-section">
+                    <label>Temperature: </label>
+                    <select id="tempSelect" onchange="updateTemperature(this.value)">
+                        <option value="0">Optimal (0%)</option>
+                        <option value="10">Mild Warm (+1%)</option>
+                        <option value="15">Warm (+1.5%)</option>
+                        <option value="30">Hot (+3%)</option>
+                        <option value="50">Extreme Heat (+5%)</option>
+                    </select>
+                </div>
+                <div class="slider-section split-interval">
+                    <label>Split Interval: </label>
+                    <select id="splitDistance" onchange="updateSplitInterval()">
+                        <option value="1">Every 1</option>
+                        <option value="2">Every 2</option>
+                        <option value="3">Every 3</option>
+                        <option value="4">Every 4</option>
+                        <option value="5">Every 5</option>
+                    </select>
+                    <select id="splitUnit" onchange="updateSplitInterval()">
+                        <option value="km">km</option>
+                        <option value="mi">mi</option>
+                    </select>
+                </div>
+                <div class="split-grid" id="splitGrid"></div>
+            </div>
+            <div class="pace-band-card" id="paceBandCard" style="display: none;">
+                <h2>Pace Band Generator</h2>
+                <div class="slider-section">
+                    <label>Target Time (HH:MM:SS): </label>
+                    <input type="text" id="targetTime" placeholder="e.g., 2:00:00">
+                </div>
+                <div class="slider-section">
+                    <label>Pacing Strategy: </label>
+                    <select id="paceStrategy" onchange="updatePaceStrategy()">
+                        <option value="even">Even Splits</option>
+                        <option value="negative">Negative Splits</option>
+                        <option value="positive">Positive Splits</option>
+                    </select>
+                </div>
+                <button onclick="generatePaceBand()">Generate Pace Band</button>
+                <div class="pace-grid" id="paceGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const distances = {
+            '1 Mile': 1.60934, // km
+            '5K': 5,
+            '10K': 10,
+            'Half Marathon': 21.0975,
+            'Marathon': 42.195
+        };
+        const fatigueFactor = 1.06;
+        let results = {};
+        let isImperial = false;
+        let selectedDistance = 'Half Marathon';
+        let paceRange = 50; // 0 = Conservative (+3%), 50 = Predicted, 100 = Aggressive (-3%)
+        let terrainRange = 0; // 0 = Flat, 15 = Rolling, 25 = Moderate, 50 = Hilly, 75 = Mountainous
+        let tempRange = 0; // 0 = Optimal, 10 = Mild Warm, 15 = Warm, 30 = Hot, 50 = Extreme Heat
+        let splitDistance = 1; // Default to 1
+        let splitUnit = 'km'; // Default to km
+        let paceStrategy = 'even'; // Default to even splits
+
+        // Populate dropdowns
+        function populateDropdown(id, max, pad = false) {
+            const select = document.getElementById(id);
+            for (let i = 0; i <= max; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.text = pad ? i.toString().padStart(2, '0') : i;
+                select.appendChild(option);
+            }
+        }
+        populateDropdown('mileH', 23); populateDropdown('mileM', 59, true); populateDropdown('mileS', 59, true);
+        populateDropdown('fiveKH', 23); populateDropdown('fiveKM', 59, true); populateDropdown('fiveKS', 59, true);
+        populateDropdown('tenKH', 23); populateDropdown('tenKM', 59, true); populateDropdown('tenKS', 59, true);
+        populateDropdown('halfMarathonH', 23); populateDropdown('halfMarathonM', 59, true); populateDropdown('halfMarathonS', 59, true);
+        populateDropdown('marathonH', 23); populateDropdown('marathonM', 59, true); populateDropdown('marathonS', 59, true);
+
+        function timeToSeconds(timeStr) {
+            if (!timeStr) return 0;
+            const parts = timeStr.split(':');
+            if (parts.length === 3) return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+            if (parts.length === 2) return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+            return 0;
+        }
+
+        function secondsToTime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            if (hours) return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function predictTime(knownTime, knownDist, targetDist) {
+            return knownTime * Math.pow(targetDist / knownDist, fatigueFactor);
+        }
+
+        function calculateTimes() {
+            const inputs = {
+                '1 Mile': timeToSeconds(document.getElementById('mileH').value + ':' + document.getElementById('mileM').value + ':' + document.getElementById('mileS').value),
+                '5K': timeToSeconds(document.getElementById('fiveKH').value + ':' + document.getElementById('fiveKM').value + ':' + document.getElementById('fiveKS').value),
+                '10K': timeToSeconds(document.getElementById('tenKH').value + ':' + document.getElementById('tenKM').value + ':' + document.getElementById('tenKS').value),
+                'Half Marathon': timeToSeconds(document.getElementById('halfMarathonH').value + ':' + document.getElementById('halfMarathonM').value + ':' + document.getElementById('halfMarathonS').value),
+                'Marathon': timeToSeconds(document.getElementById('marathonH').value + ':' + document.getElementById('marathonM').value + ':' + document.getElementById('marathonS').value)
+            };
+
+            results = {};
+            for (let target in distances) {
+                let predictions = [];
+                for (let known in inputs) {
+                    if (inputs[known] > 0) {
+                        const pred = predictTime(inputs[known], distances[known], distances[target]);
+                        predictions.push(pred);
+                    }
+                }
+                const avg = predictions.length ? predictions.reduce((a, b) => a + b) / predictions.length : null;
+                results[target] = {
+                    actual: inputs[target] > 0 ? inputs[target] : null,
+                    predicted: avg,
+                    lower: avg ? avg * 0.97 : null, // Aggressive
+                    upper: avg ? avg * 1.03 : null  // Conservative
+                };
+            }
+
+            displayResults();
+            displaySplitCard();
+            document.getElementById('output').style.display = 'block';
+        }
+
+        function displayResults() {
+            const tbody = document.querySelector('#resultsTable tbody');
+            tbody.innerHTML = '';
+            for (let dist in results) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${dist}</td>
+                    <td class="actual">${results[dist].actual ? secondsToTime(results[dist].actual) : '-'}</td>
+                    <td class="predicted">${results[dist].predicted ? secondsToTime(results[dist].predicted) : '-'}</td>
+                    <td class="range">${results[dist].lower ? `${secondsToTime(results[dist].lower)} - ${secondsToTime(results[dist].upper)}` : '-'}</td>
+                `;
+                tbody.appendChild(row);
+            }
+        }
+
+        function displaySplitCard() {
+            const splitGrid = document.getElementById('splitGrid');
+            splitGrid.innerHTML = '';
+            const finishDist = distances[selectedDistance];
+            const predictedTime = results[selectedDistance].predicted;
+            const maxDist = splitUnit === 'km' ? finishDist : finishDist / 1.60934;
+            const interval = parseInt(splitDistance);
+
+            // Calculate pace adjustment
+            const paceFactor = paceRange === 0 ? 1.03 : paceRange === 50 ? 1 : 0.97; // Conservative (+3%), Predicted (0%), Aggressive (-3%)
+            const terrainFactor = 1 + (terrainRange / 100 * 0.075); // 0% to +7.5% (adjusted for higher max)
+            const tempFactor = 1 + (tempRange / 100 * 0.05); // 0% to +5% (adjusted for higher max)
+            const adjustedTime = predictedTime * paceFactor * terrainFactor * tempFactor;
+            const paceSeconds = adjustedTime / finishDist;
+
+            // Update pace time display
+            document.getElementById('paceTime').textContent = `Total Time: ${secondsToTime(adjustedTime)}`;
+
+            // Generate splits based on interval and unit
+            for (let split = interval; split <= maxDist; split += interval) {
+                const splitDist = split; // Displayed distance
+                const splitTime = paceSeconds * (splitUnit === 'km' ? splitDist : splitDist * 1.60934);
+                const splitItem = document.createElement('div');
+                splitItem.className = 'split-item';
+                const unit = splitUnit;
+                const displayDist = Number.isInteger(split) ? split : split.toFixed(splitUnit === 'km' ? 4 : 2);
+                splitItem.innerHTML = `
+                    <h3>${displayDist} ${unit}</h3>
+                    <p>${secondsToTime(splitTime)}</p>
+                `;
+                splitGrid.appendChild(splitItem);
+            }
+
+            // Add finish line
+            const finishTime = paceSeconds * finishDist;
+            const finishItem = document.createElement('div');
+            finishItem.className = 'split-item';
+            const finishDisplay = (splitUnit === 'km' ? finishDist : finishDist / 1.60934).toFixed(splitUnit === 'km' ? 4 : 2);
+            finishItem.innerHTML = `
+                <h3>Finish (${finishDisplay} ${splitUnit})</h3>
+                <p>${secondsToTime(finishTime)}</p>
+            `;
+            splitGrid.appendChild(finishItem);
+        }
+
+        function updateUnits() {
+            isImperial = document.getElementById('unitSelect').value === 'imperial';
+            displayResults();
+            displaySplitCard();
+        }
+
+        function updateDistance(value) {
+            selectedDistance = value;
+            displaySplitCard();
+        }
+
+        function updatePaceRange(value) {
+            paceRange = parseInt(value);
+            displaySplitCard();
+        }
+
+        function updateTerrain(value) {
+            terrainRange = parseInt(value);
+            displaySplitCard();
+        }
+
+        function updateTemperature(value) {
+            tempRange = parseInt(value);
+            displaySplitCard();
+        }
+
+        function updateSplitInterval() {
+            splitDistance = parseInt(document.getElementById('splitDistance').value);
+            splitUnit = document.getElementById('splitUnit').value;
+            displaySplitCard();
+        }
+
+        function updatePaceStrategy() {
+            paceStrategy = document.getElementById('paceStrategy').value;
+            if (document.getElementById('paceGrid').style.display !== 'none') {
+                generatePaceBand();
+            }
+        }
+
+        function generatePaceBand() {
+            const targetTimeInput = document.getElementById('targetTime').value;
+            const totalSeconds = timeToSeconds(targetTimeInput);
+            if (!totalSeconds || totalSeconds <= 0) {
+                alert('Please enter a valid target time (HH:MM:SS).');
+                return;
+            }
+
+            const paceGrid = document.getElementById('paceGrid');
+            paceGrid.innerHTML = '';
+            document.getElementById('paceBandCard').style.display = 'block';
+
+            const finishDist = distances[selectedDistance];
+            const maxDist = splitUnit === 'km' ? finishDist : finishDist / 1.60934;
+            const interval = parseInt(splitDistance);
+            let splitTimes = [];
+
+            if (paceStrategy === 'even') {
+                const secondsPerInterval = totalSeconds / (Math.floor(maxDist / interval) + 1);
+                for (let split = interval; split <= maxDist; split += interval) {
+                    splitTimes.push(secondsPerInterval * (split / interval));
+                }
+            } else if (paceStrategy === 'negative') {
+                const halfDist = maxDist / 2;
+                const firstHalfFactor = 1.02; // 2% slower
+                const secondHalfFactor = 0.98; // 2% faster
+                const firstHalfTime = totalSeconds * 0.51 * firstHalfFactor; // 51% to account for finish
+                const secondHalfTime = totalSeconds * 0.49 * secondHalfFactor;
+                const intervalsPerHalf = Math.floor(halfDist / interval);
+                const firstHalfSeconds = firstHalfTime / intervalsPerHalf;
+                const secondHalfSeconds = secondHalfTime / intervalsPerHalf;
+                let currentTime = 0;
+                for (let split = interval; split <= halfDist; split += interval) {
+                    currentTime += firstHalfSeconds;
+                    splitTimes.push(currentTime);
+                }
+                for (let split = halfDist + interval; split <= maxDist; split += interval) {
+                    currentTime += secondHalfSeconds;
+                    splitTimes.push(currentTime);
+                }
+            } else if (paceStrategy === 'positive') {
+                const halfDist = maxDist / 2;
+                const firstHalfFactor = 0.98; // 2% faster
+                const secondHalfFactor = 1.02; // 2% slower
+                const firstHalfTime = totalSeconds * 0.51 * firstHalfFactor;
+                const secondHalfTime = totalSeconds * 0.49 * secondHalfFactor;
+                const intervalsPerHalf = Math.floor(halfDist / interval);
+                const firstHalfSeconds = firstHalfTime / intervalsPerHalf;
+                const secondHalfSeconds = secondHalfTime / intervalsPerHalf;
+                let currentTime = 0;
+                for (let split = interval; split <= halfDist; split += interval) {
+                    currentTime += firstHalfSeconds;
+                    splitTimes.push(currentTime);
+                }
+                for (let split = halfDist + interval; split <= maxDist; split += interval) {
+                    currentTime += secondHalfSeconds;
+                    splitTimes.push(currentTime);
+                }
+            }
+
+            splitTimes.forEach((time, index) => {
+                const split = (index + 1) * interval;
+                const paceItem = document.createElement('div');
+                paceItem.className = 'pace-item';
+                const displayDist = Number.isInteger(split) ? split : split.toFixed(splitUnit === 'km' ? 4 : 2);
+                paceItem.innerHTML = `
+                    <h3>${displayDist} ${splitUnit}</h3>
+                    <p>${secondsToTime(time)}</p>
+                `;
+                paceGrid.appendChild(paceItem);
+            });
+
+            // Add finish line
+            const finishItem = document.createElement('div');
+            finishItem.className = 'pace-item';
+            const finishDisplay = (splitUnit === 'km' ? finishDist : finishDist / 1.60934).toFixed(splitUnit === 'km' ? 4 : 2);
+            finishItem.innerHTML = `
+                <h3>Finish (${finishDisplay} ${splitUnit})</h3>
+                <p>${secondsToTime(totalSeconds)}</p>
+            `;
+            paceGrid.appendChild(finishItem);
+        }
+    </script>
+</body>
+</html>
