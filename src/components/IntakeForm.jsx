@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+npm run import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import supabase from '../supabaseClient';
 
@@ -44,7 +44,7 @@ const IntakeForm = () => {
     if (formData.weeklyMileage > mileageMax) {
       setFormData(prev => ({ ...prev, weeklyMileage: mileageMax }));
     }
-  }, [formData.unitPreference]);
+  }, [formData.unitPreference, formData.weeklyMileage, mileageMax]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
