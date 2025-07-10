@@ -6,6 +6,7 @@ import Signup from './components/Signup';
 import Dashboard from './components/Dashboard';
 import IntakeForm from './components/IntakeForm';
 import Predictor from './components/Predictor';
+import ViewPlan from './components/ViewPlan';
 import ProtectedRoute from './components/ProtectedRoute';
 
 const Navigation = () => {
@@ -161,9 +162,19 @@ const App = () => {
               <IntakeForm />
             </ProtectedRoute>
           } />
+          <Route path="/intake/:planId" element={
+            <ProtectedRoute>
+              <IntakeForm />
+            </ProtectedRoute>
+          } />
           <Route path="/predictor" element={
             <ProtectedRoute>
               <Predictor />
+            </ProtectedRoute>
+          } />
+          <Route path="/plan/:planId" element={
+            <ProtectedRoute>
+              <ViewPlan />
             </ProtectedRoute>
           } />
           <Route path="/" element={<Navigate to={user ? "/dashboard" : "/login"} replace />} />

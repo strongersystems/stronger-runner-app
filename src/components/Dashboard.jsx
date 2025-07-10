@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import supabase from '../supabaseClient';
 
@@ -25,21 +25,49 @@ const Dashboard = () => {
 
   const fetchSavedPlans = async (userId) => {
     try {
-      const { data, error } = await supabase
+      // Fetch both intakes and AI-generated plans
+      const { data: intakes, error: intakesError } = await supabase
         .from('training_intakes')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (intakesError) throw intakesError;
 
-      setSavedPlans(data || []);
+      const { data: aiPlans, error: plansError } = await supabase
+        .from('training_plans')
+        .select('*, training_intakes(*)')
+        .eq('user_id', userId)
+        .order('generated_at', { ascending: false });
+
+      if (plansError) throw plansError;
+
+      // Combine intakes with their AI plans
+      const plansWithAI = intakes?.map(intake => {
+        const relatedPlans = aiPlans?.filter(plan => plan.intake_id === intake.id) || [];
+        // Determine overall status: if any chunk is pending, status is pending; else if any complete, status is complete; else null
+        let overallStatus = null;
+        if (relatedPlans.some(p => p.status === 'pending')) {
+          overallStatus = 'pending';
+        } else if (relatedPlans.some(p => p.status === 'complete')) {
+          overallStatus = 'complete';
+        }
+        return {
+          ...intake,
+          ai_plan: {
+            status: overallStatus,
+            // Optionally, include more info if needed
+          }
+        };
+      }) || [];
+
+      setSavedPlans(plansWithAI);
       
       // Calculate stats
-      const totalPlans = data?.length || 0;
-      const totalMileage = data?.reduce((sum, plan) => sum + (plan.weekly_mileage || 0), 0) || 0;
-      const averageWeeklyTime = data?.length ? 
-        data.reduce((sum, plan) => sum + (plan.weekly_time || 0), 0) / data.length : 0;
+      const totalPlans = plansWithAI?.length || 0;
+      const totalMileage = plansWithAI?.reduce((sum, plan) => sum + (plan.weekly_mileage || 0), 0) || 0;
+      const averageWeeklyTime = plansWithAI?.length ? 
+        plansWithAI.reduce((sum, plan) => sum + (plan.weekly_time || 0), 0) / plansWithAI.length : 0;
 
       setStats({
         totalPlans,
@@ -52,6 +80,25 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
+
+  // Delete plan and all associated records
+  const handleDeletePlan = useCallback(async (planId) => {
+    if (!window.confirm('Are you sure you want to delete this plan? This action is permanent and cannot be undone.')) return;
+    setLoading(true);
+    try {
+      // Delete all associated training_plans
+      await supabase.from('training_plans').delete().eq('intake_id', planId);
+      // Delete the intake itself
+      await supabase.from('training_intakes').delete().eq('id', planId);
+      // Refresh plans
+      if (user) fetchSavedPlans(user.id);
+    } catch (err) {
+      alert('Failed to delete plan.');
+      console.error('Delete plan error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -290,17 +337,77 @@ const Dashboard = () => {
                   </div>
                 </div>
 
+                {plan.ai_plan ? (
+                  <div style={{ 
+                    background: plan.ai_plan.status === 'pending'
+                      ? 'var(--warning)'
+                      : 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    marginBottom: '16px',
+                    color: 'white',
+                    fontSize: '12px',
+                    textAlign: 'center',
+                    fontWeight: '600'
+                  }}>
+                    {plan.ai_plan.status === 'pending'
+                      ? '⏳ Generating AI Plan...'
+                      : '🤖 AI-Generated Plan Ready'}
+                  </div>
+                ) : (
+                  <div style={{ 
+                    background: 'var(--warning)',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    marginBottom: '16px',
+                    color: 'white',
+                    fontSize: '12px',
+                    textAlign: 'center',
+                    fontWeight: '600'
+                  }}>
+                    ⏳ Generating AI Plan...
+                  </div>
+                )}
+
                 <div style={{ 
                   display: 'flex', 
                   gap: '8px',
                   borderTop: '1px solid var(--border)',
                   paddingTop: '16px'
                 }}>
-                  <button className="btn-secondary" style={{ flex: 1, fontSize: '12px', padding: '8px 16px' }}>
-                    View Details
-                  </button>
-                  <button className="btn-secondary" style={{ flex: 1, fontSize: '12px', padding: '8px 16px' }}>
-                    Edit Plan
+                  <Link to={`/plan/${plan.id}`} style={{ flex: 1, textDecoration: 'none' }}>
+                    <button className="btn-secondary" style={{ width: '100%', fontSize: '12px', padding: '8px 16px' }}>
+                      {plan.ai_plan ? 'View AI Plan' : 'View Details'}
+                    </button>
+                  </Link>
+                  <Link to={`/intake/${plan.id}`} style={{ flex: 1, textDecoration: 'none' }}>
+                    <button className="btn-secondary" style={{ width: '100%', fontSize: '12px', padding: '8px 16px' }}>
+                      Edit Plan
+                    </button>
+                  </Link>
+                  <button
+                    className="btn-secondary"
+                    style={{ 
+                      width: '40px', 
+                      height: '40px', 
+                      padding: '8px', 
+                      background: 'var(--error)', 
+                      color: 'white',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '16px',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeletePlan(plan.id);
+                    }}
+                    title="Delete Plan"
+                  >
+                    🗑️
                   </button>
                 </div>
               </div>
