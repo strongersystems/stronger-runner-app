@@ -18,6 +18,16 @@ const openai = new OpenAI({
 // Function to process a single plan
 async function processPlan(plan) {
   try {
+    // --- NEW: Clean up stuck/errored/pending chunks for this intake except the first chunk ---
+    if (plan.intake_id && plan.week_range && plan.week_range !== '1-4') {
+      // Only run this for the first chunk in the chain
+      // Only keep the current chunk, delete all others for this intake with status not 'complete'
+      await supabase.from('training_plans')
+        .delete()
+        .eq('intake_id', plan.intake_id)
+        .not('status', 'eq', 'complete')
+        .not('week_range', 'eq', plan.week_range);
+    }
     // 2. Build the prompt from plan/intake data
     const userPrompt = plan.prompt || plan.user_prompt || 'Create a running plan.';
     // Make the prompt even stricter and specify the required schema
@@ -153,29 +163,37 @@ Do not use any other summary fields. Always use the 'summary' field for each wee
     // --- Auto-create next chunk if more weeks remain ---
     try {
       // Try to get total plan length and current chunk info
-      let totalWeeks = 12; // Default to 12 weeks instead of 16
+      let totalWeeks = null; // Don't default - we need to get it from intake
       let thisChunkStart = 1, thisChunkEnd = 4;
-      
-      // FIRST: Get plan length from intake data (most reliable)
+      let intake = null;
+      let weeklySchedule = null;
+      // FIRST: Get all intake data (most reliable)
       if (plan.intake_id) {
         try {
-          const { data: intake } = await supabase
+          const { data: intakeData } = await supabase
             .from('training_intakes')
-            .select('plan_length')
+            .select('*')
             .eq('id', plan.intake_id)
             .single();
-          if (intake && intake.plan_length) {
-            const intakeMatch = intake.plan_length.match(/(\d+)/);
-            if (intakeMatch) {
-              totalWeeks = parseInt(intakeMatch[1], 10);
-              console.log(`[AUTO-CHUNK] Got total weeks from intake: ${totalWeeks}`);
+          if (intakeData) {
+            intake = intakeData;
+            console.log(`[AUTO-CHUNK] Intake data:`, intake);
+            if (intake.plan_length) {
+              const intakeMatch = intake.plan_length.match(/(\d+)/);
+              if (intakeMatch) {
+                totalWeeks = parseInt(intakeMatch[1], 10);
+                console.log(`[AUTO-CHUNK] Got total weeks from intake: ${totalWeeks}`);
+              } else {
+                console.log(`[AUTO-CHUNK] Could not parse plan_length: ${intake.plan_length}`);
+              }
+            } else {
+              console.log(`[AUTO-CHUNK] No plan_length found in intake`);
             }
           }
         } catch (intakeErr) {
           console.log(`[AUTO-CHUNK] Could not fetch intake data:`, intakeErr.message);
         }
       }
-      
       // SECOND: Parse week range from prompt
       if (plan.prompt) {
         // Try to match 'weeks X-Y' or 'weeks X to Y' or 'week X-Y'
@@ -207,13 +225,20 @@ Do not use any other summary fields. Always use the 'summary' field for each wee
       // Try to get from plan_json if available
       if (structuredPlan && Array.isArray(structuredPlan.weekly_breakdown)) {
         const maxWeek = Math.max(...structuredPlan.weekly_breakdown.map(w => w.week || 0));
-        if (maxWeek > thisChunkEnd) thisChunkEnd = maxWeek;
+        if (!thisChunkEnd || isNaN(thisChunkEnd) || thisChunkEnd < 1) {
+          thisChunkEnd = maxWeek;
+        } else if (maxWeek > thisChunkEnd) {
+          thisChunkEnd = maxWeek;
+        }
       }
       console.log(`[AUTO-CHUNK] Parsed: thisChunkStart=${thisChunkStart}, thisChunkEnd=${thisChunkEnd}, totalWeeks=${totalWeeks}`);
       // If more weeks remain, insert next chunk
-      if (thisChunkEnd < totalWeeks) {
-        const nextStart = thisChunkEnd + 1;
-        const nextEnd = Math.min(thisChunkEnd + 4, totalWeeks);
+      if (totalWeeks && thisChunkEnd < totalWeeks) {
+        let nextStart = thisChunkEnd + 1;
+        let nextEnd = Math.min(thisChunkEnd + 4, totalWeeks);
+        // Fallback: if nextStart is not a valid number, set to 1
+        if (!nextStart || isNaN(nextStart) || nextStart < 1) nextStart = 1;
+        if (!nextEnd || isNaN(nextEnd) || nextEnd < nextStart) nextEnd = nextStart + 3;
         // Only insert if not already present (and only one pending chunk per week range)
         const { data: existing, error: findErr } = await supabase
           .from('training_plans')
@@ -224,21 +249,54 @@ Do not use any other summary fields. Always use the 'summary' field for each wee
           console.error(`[AUTO-CHUNK] Error checking for existing chunk:`, findErr);
         }
         if (!existing || existing.length === 0) {
-          // Compose a new prompt for the next chunk (reuse plan.prompt as base)
-          let nextPrompt;
-          if (/weeks?\s*\d+\s*[-to]+\s*\d+/i.test(plan.prompt)) {
-            nextPrompt = plan.prompt.replace(/weeks?\s*\d+\s*[-to]+\s*\d+/i, `weeks ${nextStart}-${nextEnd}`);
-          } else {
-            // If no week range in prompt, append it
-            nextPrompt = `${plan.prompt.trim()} (weeks ${nextStart}-${nextEnd})`;
+          // --- Build the prompt from scratch using intake data ---
+          let weeklyScheduleText = '';
+          if (plan.weekly_schedule) {
+            // Use from plan if available
+            weeklySchedule = plan.weekly_schedule;
+          } else if (intake && intake.weekly_schedule) {
+            weeklySchedule = intake.weekly_schedule;
           }
+          if (weeklySchedule) {
+            try {
+              const ws = typeof weeklySchedule === 'string' ? JSON.parse(weeklySchedule) : weeklySchedule;
+              weeklyScheduleText = Object.entries(ws).map(([day, schedule]) => {
+                const available = Object.entries(schedule).filter(([type, checked]) => checked).map(([type]) => {
+                  return type === 'easyRun' ? 'Easy Run' : type === 'session' ? 'Session/Workout' : 'Long Run';
+                });
+                return `${day}: ${available.length > 0 ? available.join(', ') : 'No preference'}`;
+              }).join('\n');
+            } catch (e) {
+              weeklyScheduleText = '';
+            }
+          }
+          // Compose the prompt
+          const unit = intake && intake.unit_preference === 'imperial' ? 'miles' : 'km';
+          const prompt = `Create a detailed ${nextEnd - nextStart + 1}-week segment (weeks ${nextStart}-${nextEnd}) of a marathon training plan for a runner with the following profile:\n\n` +
+            `Age: ${intake?.age || 'Not specified'}\n` +
+            `Weight: ${intake?.weight || 'Not specified'} ${unit === 'km' ? 'kg' : 'lbs'}\n` +
+            `Height: ${intake?.height || 'Not specified'} ${unit === 'km' ? 'cm' : 'inches'}\n` +
+            `Training for: ${intake?.training_for || 'Marathon'}\n` +
+            `Goals: ${intake?.goals || 'Not specified'}\n` +
+            `${intake?.weekly_mileage ? `Current (recent) weekly mileage: ${intake.weekly_mileage} ${unit}.\n` : ''}` +
+            `${intake?.starting_volume ? `Starting weekly volume: ${intake.starting_volume} ${unit}.\n` : ''}` +
+            `${intake?.max_volume ? `Maximum weekly volume: ${intake.max_volume} ${unit}.\n` : ''}` +
+            `Weekly training time: ${intake?.weekly_time || 'Not specified'} hours\n` +
+            `Training intensity preference: ${intake?.training_intensity || 'hr'}\n` +
+            `RPE familiarity: ${intake?.rpe_familiarity || 'Not specified'}\n` +
+            `Max heart rate: ${intake?.max_hr || 'Not specified'} bpm\n` +
+            `Resting heart rate: ${intake?.resting_hr || 'Not specified'} bpm\n` +
+            `Training history: ${intake?.training_history || 'Not specified'}\n\n` +
+            `Weekly Schedule Preferences (user's preferred days for easy runs, sessions, long runs):\n${weeklyScheduleText}\n\n` +
+            `${intake?.other_requests ? `Additional user requests: ${intake.other_requests}\n` : ''}` +
+            `\nThis is part of a ${totalWeeks}-week marathon plan. You are creating weeks ${nextStart}-${nextEnd} of ${totalWeeks}.\nDo NOT include the final taper or race week in this chunk.\nInstructions:\n- You are an expert running coach creating weeks ${nextStart}-${nextEnd} of a progressive marathon training plan.\n- This is the DEVELOPMENT or PEAKING phase - gradually increase volume and introduce more structured workouts.\n- Structure the plan so that at least 80% of running is easy, and no more than 20% is moderate/intense.\n- Use the user's preferred days for easy runs, sessions, and long runs as suggestions, but optimize for best training outcomes.\n- For each week, provide a summary of the key sessions to be completed.\n- For each day, suggest a workout (easy run, session, long run, rest, etc.), a mileage target, and a heart rate or RPE range.\n- The sum of daily mileages should match the weekly total.\n- Build progressively on the previous weeks' training if available.\n- Only respond with valid JSON. Do NOT include any explanations, comments, or markdown. Do NOT wrap your response in triple backticks or any other formatting.\n- Output a complete, valid JSON object for weeks ${nextStart} to ${nextEnd} only.\n- For each week in weekly_breakdown, always use the property 'week' (not 'week_number') for the week number.`;
           // Insert new pending chunk
           const { data: newChunk, error: insertError } = await supabase.from('training_plans').insert([
             {
               user_id: plan.user_id,
               intake_id: plan.intake_id,
               status: 'pending',
-              prompt: nextPrompt,
+              prompt,
               week_range: `${nextStart}-${nextEnd}`,
               chunk_type: 'chunk',
               error_message: null
@@ -256,8 +314,10 @@ Do not use any other summary fields. Always use the 'summary' field for each wee
         } else {
           console.log(`[AUTO-CHUNK] Next chunk weeks ${nextStart}-${nextEnd} already exists or is pending.`);
         }
-      } else {
+      } else if (totalWeeks) {
         console.log('[AUTO-CHUNK] No more weeks to generate. Plan is complete.');
+      } else {
+        console.log('[AUTO-CHUNK] Could not determine total weeks - stopping chunk generation.');
       }
     } catch (autoErr) {
       console.error('Error auto-creating next chunk:', autoErr);

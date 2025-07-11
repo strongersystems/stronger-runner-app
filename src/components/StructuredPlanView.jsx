@@ -99,6 +99,19 @@ const StructuredPlanView = ({ aiPlan }) => {
   }));
   const intensity = aiPlan.training_intensity || aiPlan.training_intensity_preference || 'N/A';
 
+  // Get unit preference (default to km)
+  const unit = aiPlan.unit_preference === 'imperial' ? 'mi' : 'km';
+
+  // HR zone color helper
+  function getHRZoneColor(hrRange) {
+    if (!Array.isArray(hrRange) || hrRange.length !== 2) return 'var(--bg-card)';
+    const avg = (hrRange[0] + hrRange[1]) / 2;
+    if (avg < 130) return '#1e7e34'; // Green: Easy
+    if (avg < 150) return '#ffc107'; // Yellow: Moderate
+    if (avg < 170) return '#fd7e14'; // Orange: Hard
+    return '#dc3545'; // Red: Very hard
+  }
+
   // TEMP: Debug log for weeks array
   console.log('StructuredPlanView weeks:', weeks);
 
@@ -183,33 +196,41 @@ const StructuredPlanView = ({ aiPlan }) => {
                       width: '100%',
                     }}
                   >
-                    {week.days.map((day, idx) => (
-                      <div key={day.day || idx} style={{
-                        background: 'var(--bg-card)',
-                        borderRadius: 8,
-                        boxShadow: '0 1px 2px var(--shadow)',
-                        padding: 10,
-                        minWidth: 110,
-                        maxWidth: 130,
-                        flex: '1 1 13%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'flex-start',
-                        justifyContent: 'center',
-                        fontSize: 13,
-                        marginBottom: 0
-                      }}>
-                        <div style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 2, textTransform: 'capitalize', fontWeight: 600 }}>{safeRender(day.day)}</div>
-                        <div style={{ color: 'var(--text-light)', fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{safeRender(day.workout)}</div>
-                        {day.volume !== undefined && <div style={{ color: 'var(--text-light)', fontSize: 12 }}>Vol: {safeRender(day.volume)}</div>}
-                        {Array.isArray(day.heart_rate_range) && day.heart_rate_range.length === 2 && (
-                          <div style={{ color: 'var(--text-light)', fontSize: 12 }}>HR: {safeRender(day.heart_rate_range[0])}–{safeRender(day.heart_rate_range[1])}</div>
-                        )}
-                        {Array.isArray(day.rpe_range) && day.rpe_range.length === 2 && (
-                          <div style={{ color: 'var(--text-light)', fontSize: 12 }}>RPE: {safeRender(day.rpe_range[0])}–{safeRender(day.rpe_range[1])}</div>
-                        )}
-                      </div>
-                    ))}
+                    {week.days.map((day, idx) => {
+                      // Determine HR zone color
+                      let cardBg = 'var(--bg-card)';
+                      if (Array.isArray(day.heart_rate_range) && day.heart_rate_range.length === 2) {
+                        cardBg = getHRZoneColor(day.heart_rate_range);
+                      }
+                      return (
+                        <div key={day.day || idx} style={{
+                          background: cardBg,
+                          borderRadius: 8,
+                          boxShadow: '0 1px 2px var(--shadow)',
+                          padding: 12,
+                          minWidth: 120,
+                          maxWidth: 140,
+                          flex: '1 1 13%',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 13,
+                          marginBottom: 0,
+                          transition: 'background 0.2s',
+                        }}>
+                          <div style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 2, textTransform: 'capitalize', fontWeight: 600 }}>{safeRender(day.day)}</div>
+                          <div style={{ color: 'var(--text-light)', fontSize: 13, fontWeight: 600, marginBottom: 2, textAlign: 'center' }}>{safeRender(day.workout)}</div>
+                          {day.volume !== undefined && <div style={{ color: 'var(--text-light)', fontSize: 12 }}>Vol: {safeRender(day.volume)} {unit}</div>}
+                          {Array.isArray(day.heart_rate_range) && day.heart_rate_range.length === 2 && (
+                            <div style={{ color: 'var(--text-light)', fontSize: 12 }}>HR: {safeRender(day.heart_rate_range[0])}–{safeRender(day.heart_rate_range[1])}</div>
+                          )}
+                          {Array.isArray(day.rpe_range) && day.rpe_range.length === 2 && (
+                            <div style={{ color: 'var(--text-light)', fontSize: 12 }}>RPE: {safeRender(day.rpe_range[0])}–{safeRender(day.rpe_range[1])}</div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 8, fontStyle: 'italic' }}>

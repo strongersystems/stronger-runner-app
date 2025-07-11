@@ -83,7 +83,9 @@ const ViewPlan = () => {
                       ...w,
                       week: weekNum, // Always use 'week' property
                       _chunkRangeStart: start,
-                      _chunkRangeEnd: end
+                      _chunkRangeEnd: end,
+                      _chunkId: chunk.id,
+                      _chunkStatus: chunk.status
                     });
                   }
                 });
@@ -110,10 +112,8 @@ const ViewPlan = () => {
           });
           const uniqueWeeks = Array.from(weekMap.values());
           uniqueWeeks.sort((a, b) => a.week - b.week);
-          
-          console.log('Parsed weeks:', uniqueWeeks.map(w => ({week: w.week, summary: w.summary?.substring(0, 50)})));
+          console.log('Parsed weeks:', uniqueWeeks.map(w => ({week: w.week, summary: w.summary?.substring(0, 50), _chunkId: w._chunkId, _chunkStatus: w._chunkStatus})));
           console.log('Total weeks found:', uniqueWeeks.length);
-          
           if (uniqueWeeks.length > 0) {
             setAiPlan({
               ...latestChunkList[0],
