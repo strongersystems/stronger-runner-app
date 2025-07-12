@@ -8,6 +8,7 @@ const IntakeForm = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -124,6 +125,7 @@ const IntakeForm = () => {
     setLoading(true);
     setError('');
     setSuccess('');
+    setIsGenerating(true);
 
     console.log('Form submission started');
     console.log('User:', user);
@@ -341,6 +343,15 @@ const IntakeForm = () => {
             fontSize: '14px'
           }}>
             {success}
+          </div>
+        )}
+
+        {isGenerating && (
+          <div style={{ textAlign: 'center', margin: '20px 0' }}>
+            <div className="spinner" style={{ fontSize: '32px' }}>⏳ Generating your plan...</div>
+            <div style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
+              Your plan is being generated in the background. It will appear in your dashboard when ready.
+            </div>
           </div>
         )}
 

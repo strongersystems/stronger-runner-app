@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import supabase from '../supabaseClient';
 import StructuredPlanView from './StructuredPlanView';
@@ -23,6 +23,11 @@ const ViewPlan = () => {
   const [error, setError] = useState('');
   const [regenerating, setRegenerating] = useState(false);
   const [waitSeconds, setWaitSeconds] = useState(0);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [planStatus, setPlanStatus] = useState(null);
+  const [generating, setGenerating] = useState({}); // Track loading per week range
+  const generatingRef = useRef({}); // Ref to block double trigger
+  const [blockTimers, setBlockTimers] = useState({}); // Track block countdown per week range
   // Remove showEdit and handleEditSave/handleEditCancel
 
   // Main effect: fetch and parse plan, set up polling
@@ -269,6 +274,7 @@ const ViewPlan = () => {
       `- For each day, suggest a workout (easy run, session, long run, rest, etc.), a mileage target, and ${plan.training_intensity === 'hr' ? 'a heart rate range (bpm)' : 'an RPE value'}.\n` +
       `- The sum of daily mileages should match the weekly total.\n` +
       `- Build progressively on the previous weeks' training if available.\n` +
+      `- CRITICAL: Long run distances must NEVER exceed 35 km (metric) or 22 miles (imperial). This is a strict safety limit.\n` +
       `- Only respond with valid JSON. Do NOT include any explanations, comments, or markdown. Do NOT wrap your response in triple backticks or any other formatting.\n` +
       `- Output a complete, valid JSON object for weeks ${startWeek} to ${endWeek} only.\n` +
       `- For each week in weekly_breakdown, always use the property 'week' (not 'week_number') for the week number.`;
@@ -278,7 +284,58 @@ const ViewPlan = () => {
 
   // Handler to trigger week chunk generation
   const generateWeeks = async (startWeek, endWeek) => {
-    setRegenerating(true);
+    const rangeKey = `${startWeek}-${endWeek}`;
+    if (generatingRef.current[rangeKey]) return; // Prevent double trigger for this range
+    generatingRef.current[rangeKey] = true;
+    setGenerating(prev => ({ ...prev, [rangeKey]: true }));
+    setPlanStatus('pending');
+    setBlockTimers(prev => ({ ...prev, [rangeKey]: 10 })); // Start 10s block
+
+    // Start countdown timer
+    let countdown = 10;
+    const timer = setInterval(() => {
+      countdown -= 1;
+      setBlockTimers(prev => ({ ...prev, [rangeKey]: countdown }));
+      if (countdown <= 0) {
+        clearInterval(timer);
+      }
+    }, 1000);
+
+    // Start polling for status for this week range
+    let backendReady = false;
+    const poll = setInterval(async () => {
+      const { data: plans, error } = await supabase
+        .from('training_plans')
+        .select('status')
+        .eq('intake_id', planId)
+        .eq('week_range', rangeKey);
+      if (plans && plans.length > 0) {
+        setPlanStatus(plans[0].status);
+        if (plans[0].status === 'complete' || plans[0].status === 'error') {
+          backendReady = true;
+          clearInterval(poll);
+          // Only re-enable after both backend is ready and block timer is done
+          const unblock = () => {
+            setGenerating(prev => ({ ...prev, [rangeKey]: false }));
+            generatingRef.current[rangeKey] = false;
+            setBlockTimers(prev => ({ ...prev, [rangeKey]: 0 }));
+          };
+          if (countdown <= 0) {
+            unblock();
+          } else {
+            const wait = setInterval(() => {
+              if (countdown <= 0) {
+                unblock();
+                clearInterval(wait);
+              }
+            }, 500);
+          }
+        }
+      } else {
+        setPlanStatus('pending');
+      }
+    }, 2000);
+
     try {
       // Remove the delete step: always insert a new row
       let priorWeeksSummary = '';
@@ -331,11 +388,12 @@ const ViewPlan = () => {
       if (insertError) {
         console.error('Error creating chunk plan:', insertError);
         alert(`Failed to create plan chunk for weeks ${startWeek}-${endWeek}: ${insertError.message}`);
-        setRegenerating(false);
+        setGenerating(prev => ({ ...prev, [rangeKey]: false }));
+        generatingRef.current[rangeKey] = false;
         return;
       }
 
-      setRegenerating(false);
+      setGenerating(prev => ({ ...prev, [rangeKey]: false }));
       
       // Trigger background function immediately for this chunk
       try {
@@ -353,8 +411,10 @@ const ViewPlan = () => {
       } catch (error) {
         console.log('Background function trigger failed (will run on schedule):', error);
       }
+
     } catch (err) {
-      setRegenerating(false);
+      setGenerating(prev => ({ ...prev, [rangeKey]: false }));
+      generatingRef.current[rangeKey] = false;
       alert('Failed to generate weeks.');
       console.error('generateWeeks error:', err);
     }
@@ -461,22 +521,40 @@ const ViewPlan = () => {
           >
             🔄
           </button>
-          {weekStatus.map((range, index) => (
-            <button
-              key={index}
-              className="btn"
-              onClick={() => generateWeeks(range.start, range.end)}
-              disabled={regenerating}
-              style={{ 
-                background: range.hasWeeks ? 'var(--success)' : 'var(--primary)',
-                color: 'white'
-              }}
-            >
-              {regenerating ? `Generating ${range.label}...` : 
-               range.hasWeeks ? `${range.label} Ready ✓` : `Create ${range.label}`}
-            </button>
-          ))}
+          {weekStatus.map((range, index) => {
+            const rangeKey = `${range.start}-${range.end}`;
+            const isBlocked = !!generating[rangeKey] || (blockTimers[rangeKey] > 0);
+            return (
+              <button
+                key={index}
+                className="btn"
+                onClick={() => generateWeeks(range.start, range.end)}
+                disabled={isBlocked}
+                style={{
+                  background: isBlocked ? 'grey' : (range.hasWeeks ? 'var(--success)' : 'var(--primary)'),
+                  color: 'white',
+                  cursor: isBlocked ? 'not-allowed' : 'pointer',
+                  position: 'relative',
+                  marginRight: '8px'
+                }}
+              >
+                {generating[rangeKey] ? `Generating ${range.label}...` :
+                  range.hasWeeks ? `${range.label} Ready ✓` : `Create ${range.label}`}
+                {generating[rangeKey] && (
+                  <span style={{ marginLeft: 8, color: 'red', fontSize: 16 }}>⏳</span>
+                )}
+                {blockTimers[rangeKey] > 0 && !generating[rangeKey] && (
+                  <span style={{ marginLeft: 8, color: 'orange', fontSize: 14 }}>Blocked {blockTimers[rangeKey]}s</span>
+                )}
+              </button>
+            );
+          })}
         </div>
+        {isGenerating && (
+          <div style={{ textAlign: 'center', margin: '20px 0' }}>
+            <div style={{ color: 'red', fontSize: 24 }}>GENERATING...</div>
+          </div>
+        )}
         {/* Edit Plan Button */}
         <div style={{ textAlign: 'right', marginBottom: '10px' }}>
           <button
@@ -498,22 +576,40 @@ const ViewPlan = () => {
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '20px' }}>
         {/* Generate Weeks Buttons */}
         <div style={{ display: 'flex', gap: '12px', marginBottom: '10px', justifyContent: 'flex-end' }}>
-          {weekStatus.map((range, index) => (
-            <button
-              key={index}
-              className="btn"
-              onClick={() => generateWeeks(range.start, range.end)}
-              disabled={regenerating}
-              style={{ 
-                background: range.hasWeeks ? 'var(--success)' : 'var(--primary)',
-                color: 'white'
-              }}
-            >
-              {regenerating ? `Generating ${range.label}...` : 
-               range.hasWeeks ? `${range.label} Ready ✓` : `Create ${range.label}`}
-            </button>
-          ))}
+          {weekStatus.map((range, index) => {
+            const rangeKey = `${range.start}-${range.end}`;
+            const isBlocked = !!generating[rangeKey] || (blockTimers[rangeKey] > 0);
+            return (
+              <button
+                key={index}
+                className="btn"
+                onClick={() => generateWeeks(range.start, range.end)}
+                disabled={isBlocked}
+                style={{
+                  background: isBlocked ? 'grey' : (range.hasWeeks ? 'var(--success)' : 'var(--primary)'),
+                  color: 'white',
+                  cursor: isBlocked ? 'not-allowed' : 'pointer',
+                  position: 'relative',
+                  marginRight: '8px'
+                }}
+              >
+                {generating[rangeKey] ? `Generating ${range.label}...` :
+                  range.hasWeeks ? `${range.label} Ready ✓` : `Create ${range.label}`}
+                {generating[rangeKey] && (
+                  <span style={{ marginLeft: 8, color: 'red', fontSize: 16 }}>⏳</span>
+                )}
+                {blockTimers[rangeKey] > 0 && !generating[rangeKey] && (
+                  <span style={{ marginLeft: 8, color: 'orange', fontSize: 14 }}>Blocked {blockTimers[rangeKey]}s</span>
+                )}
+              </button>
+            );
+          })}
         </div>
+        {isGenerating && (
+          <div style={{ textAlign: 'center', margin: '20px 0' }}>
+            <div style={{ color: 'red', fontSize: 24 }}>GENERATING...</div>
+          </div>
+        )}
         {/* Edit Plan Button */}
         <div style={{ textAlign: 'right', marginBottom: '10px' }}>
           <button

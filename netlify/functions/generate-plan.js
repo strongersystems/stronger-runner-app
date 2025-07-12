@@ -35,6 +35,8 @@ exports.handler = async (event, context) => {
     // Add strict JSON-only instruction to the prompt
     const prompt = `${userPrompt}
 
+IMPORTANT: Long runs must NEVER exceed 35 km (or 22 miles for imperial units). This is a strict safety limit.
+
 Respond ONLY with a valid JSON object. Do NOT include any text, explanations, comments (such as // or /* ... */), or markdown. Do NOT wrap your response in triple backticks or any other formatting.
 
 The JSON must have the following top-level keys: plan_title, introduction, goals_summary, weekly_breakdown (an array of weeks, each with days, etc). The goals_summary field MUST be a single, readable string summarizing the runner's goals and context, not a JSON object. Output a complete, valid JSON object for the full plan.
@@ -51,13 +53,14 @@ For each week in weekly_breakdown:
 - Do NOT use any other summary fields (like 'key_sessions_summary').
 - Do NOT use any extra fields.
 - The output must be consistent for all weeks and all days.
+- CRITICAL: Long run distances must NEVER exceed 35 km (metric) or 22 miles (imperial).
 
 Example (HR-based week):
 {
   "week": 1,
   "summary": "This week focuses on building aerobic base with a long run on Sunday.",
   "key_sessions": [
-    "Long run of 32 km, mostly easy pace",
+    "Long run of 25 km, mostly easy pace",
     "Tempo run of 12 km at moderate intensity"
   ],
   "total_volume": 110,

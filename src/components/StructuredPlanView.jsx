@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -13,6 +13,20 @@ import {
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const StructuredPlanView = ({ aiPlan }) => {
+  const [expandedWeeks, setExpandedWeeks] = useState(new Set());
+
+  const toggleWeek = (weekNumber) => {
+    setExpandedWeeks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(weekNumber)) {
+        newSet.delete(weekNumber);
+      } else {
+        newSet.add(weekNumber);
+      }
+      return newSet;
+    });
+  };
+
   if (!aiPlan) {
     return (
       <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>
@@ -112,6 +126,30 @@ const StructuredPlanView = ({ aiPlan }) => {
     return '#dc3545'; // Red: Very hard
   }
 
+  // Replace the day card rendering with improved styles and responsive layout
+
+  const getDayColor = (workout) => {
+    // Use high-contrast, accessible colors
+    if (/rest/i.test(workout)) return '#444';
+    if (/long/i.test(workout)) return '#f9b233'; // Gold
+    if (/tempo|interval|session|vo2|steady/i.test(workout)) return '#e4572e'; // Orange-Red
+    if (/easy/i.test(workout)) return '#2eae57'; // Green
+    if (/park run/i.test(workout)) return '#ff9800'; // Orange
+    return '#3a6ea5'; // Blue for other
+  };
+
+  const getTextColor = (bg) => {
+    // Simple luminance check for white or dark text
+    if (!bg) return '#fff';
+    const c = bg.substring(1); // strip #
+    const rgb = parseInt(c, 16);
+    const r = (rgb >> 16) & 0xff;
+    const g = (rgb >> 8) & 0xff;
+    const b = (rgb >> 0) & 0xff;
+    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+    return luminance > 160 ? '#222' : '#fff';
+  };
+
   // TEMP: Debug log for weeks array
   console.log('StructuredPlanView weeks:', weeks);
 
@@ -149,98 +187,135 @@ const StructuredPlanView = ({ aiPlan }) => {
           <div style={{ color: 'var(--text-muted)', fontSize: 15 }}><strong>Intensity:</strong> {safeRender(intensity).toUpperCase()}</div>
         </div>
       </div>
-      <h2 style={{ color: 'var(--primary)', fontSize: 24, fontWeight: 600, marginBottom: 24, textAlign: 'center' }}>Weekly Breakdown</h2>
-      {weeks.length === 0 ? (
-        <div style={{ color: 'var(--text-muted)', fontSize: 16, textAlign: 'center', padding: 32 }}>
-          No weeks found. Please generate a plan chunk.
-        </div>
-      ) : (
-        weeks
-          .filter(week => week && week.week !== undefined)
-          .sort((a, b) => a.week - b.week)
-          .map(week => (
-            <div key={week.week} style={{
-              background: 'var(--bg-secondary)',
-              borderRadius: 10,
-              boxShadow: '0 1px 4px var(--shadow)',
-              marginBottom: 20,
-              padding: 16,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              minWidth: 0
+      {/* Weekly Breakdown */}
+      <div style={{ marginTop: 32 }}>
+        <h2 style={{ color: 'var(--neon-orange)', textAlign: 'center', marginBottom: 24 }}>Weekly Breakdown</h2>
+        {weeks.map((week, i) => {
+          const isExpanded = expandedWeeks.has(week.week);
+          const totalVolume = Array.isArray(week.days) 
+            ? week.days.reduce((sum, day) => sum + (day.volume || 0), 0)
+            : 0;
+          
+          return (
+            <div key={i} style={{
+              background: '#181c24',
+              borderRadius: 16,
+              marginBottom: 32,
+              boxShadow: '0 2px 8px var(--shadow)',
+              padding: 20,
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-                <div style={{ fontSize: 17, fontWeight: '700', color: 'var(--primary)', marginRight: 10 }}>Week {safeRender(week.week)}</div>
+              <div 
+                style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  padding: '8px 0',
+                  borderBottom: '1px solid rgba(255,255,255,0.1)',
+                  marginBottom: 16
+                }}
+                onClick={() => toggleWeek(week.week)}
+              >
+                <div style={{ color: '#ff6600', fontWeight: 700, fontSize: 22 }}>Week {week.week}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ 
+                    color: '#fff', 
+                    fontSize: 16, 
+                    background: 'rgba(255, 102, 0, 0.2)', 
+                    padding: '4px 12px', 
+                    borderRadius: 8,
+                    border: '1px solid rgba(255, 102, 0, 0.3)'
+                  }}>
+                    Total: {totalVolume} {unit}
+                  </div>
+                  <div style={{ 
+                    color: '#ff6600', 
+                    fontSize: 18, 
+                    fontWeight: 'bold',
+                    transition: 'transform 0.2s ease',
+                    transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
+                  }}>
+                    ▼
+                  </div>
+                </div>
               </div>
-              {/* Weekly summary (from summary or key_sessions_summary) */}
-              {typeof week.summary === 'string' && week.summary.trim() ? (
-                <div style={{ color: 'var(--text-muted)', fontSize: 14, fontStyle: 'italic', marginBottom: 10 }}>{week.summary}</div>
-              ) : typeof week.key_sessions_summary === 'string' && week.key_sessions_summary.trim() ? (
-                <div style={{ color: 'var(--text-muted)', fontSize: 14, fontStyle: 'italic', marginBottom: 10 }}>{week.key_sessions_summary}</div>
-              ) : null}
-              <div style={{ width: '100%' }}>
-                {Array.isArray(week.days) && week.days.length > 0 ? (
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'row',
-                      gap: 8,
-                      overflowX: 'auto',
-                      paddingBottom: 4,
-                      marginBottom: 2,
-                      scrollbarWidth: 'thin',
-                      WebkitOverflowScrolling: 'touch',
-                      flexWrap: 'nowrap',
-                      justifyContent: 'center',
-                      width: '100%',
-                    }}
-                  >
-                    {week.days.map((day, idx) => {
-                      // Determine HR zone color
-                      let cardBg = 'var(--bg-card)';
-                      if (Array.isArray(day.heart_rate_range) && day.heart_rate_range.length === 2) {
-                        cardBg = getHRZoneColor(day.heart_rate_range);
-                      }
-                      return (
-                        <div key={day.day || idx} style={{
-                          background: cardBg,
-                          borderRadius: 8,
-                          boxShadow: '0 1px 2px var(--shadow)',
-                          padding: 12,
-                          minWidth: 120,
-                          maxWidth: 140,
-                          flex: '1 1 13%',
+              
+              <div style={{ color: '#fff', fontSize: 16, marginBottom: 16 }}>{week.summary}</div>
+              
+              {isExpanded && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 16,
+                    marginBottom: 0,
+                    justifyContent: 'flex-start',
+                    animation: 'slideDown 0.3s ease-out'
+                  }}
+                >
+                  {Array.isArray(week.days) && week.days.map((day, j) => {
+                    const bg = getDayColor(day.workout || '');
+                    const color = getTextColor(bg);
+                    return (
+                      <div
+                        key={j}
+                        style={{
+                          background: bg,
+                          color,
+                          borderRadius: 12,
+                          padding: '16px 14px',
+                          minWidth: 140,
+                          flex: '1 1 140px',
+                          maxWidth: 180,
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                          marginBottom: 8,
                           display: 'flex',
                           flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 13,
-                          marginBottom: 0,
-                          transition: 'background 0.2s',
-                        }}>
-                          <div style={{ color: 'var(--text-muted)', fontSize: 12, marginBottom: 2, textTransform: 'capitalize', fontWeight: 600 }}>{safeRender(day.day)}</div>
-                          <div style={{ color: 'var(--text-light)', fontSize: 13, fontWeight: 600, marginBottom: 2, textAlign: 'center' }}>{safeRender(day.workout)}</div>
-                          {day.volume !== undefined && <div style={{ color: 'var(--text-light)', fontSize: 12 }}>Vol: {safeRender(day.volume)} {unit}</div>}
-                          {Array.isArray(day.heart_rate_range) && day.heart_rate_range.length === 2 && (
-                            <div style={{ color: 'var(--text-light)', fontSize: 12 }}>HR: {safeRender(day.heart_rate_range[0])}–{safeRender(day.heart_rate_range[1])}</div>
-                          )}
-                          {Array.isArray(day.rpe_range) && day.rpe_range.length === 2 && (
-                            <div style={{ color: 'var(--text-light)', fontSize: 12 }}>RPE: {safeRender(day.rpe_range[0])}–{safeRender(day.rpe_range[1])}</div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 8, fontStyle: 'italic' }}>
-                    No daily workouts found for this week.
-                  </div>
-                )}
-              </div>
+                          alignItems: 'flex-start',
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{day.day}</div>
+                        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{day.workout}</div>
+                        {day.volume !== undefined && (
+                          <div style={{ fontSize: 13, marginBottom: 2 }}>Vol: {day.volume} {unit}</div>
+                        )}
+                        {day.heart_rate_range && (
+                          <div style={{ fontSize: 13 }}>HR: {day.heart_rate_range[0]}–{day.heart_rate_range[1]}</div>
+                        )}
+                        {day.rpe_range && (
+                          <div style={{ fontSize: 13 }}>RPE: {day.rpe_range[0]}–{day.rpe_range[1]}</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          ))
-      )}
+          );
+        })}
+      </div>
+      <style>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @media (max-width: 600px) {
+          .week-breakdown-row {
+            flex-direction: column !important;
+          }
+          .week-breakdown-row > div {
+            min-width: 90vw !important;
+            max-width: 98vw !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

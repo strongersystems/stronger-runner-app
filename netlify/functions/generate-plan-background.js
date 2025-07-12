@@ -33,6 +33,8 @@ async function processPlan(plan) {
     // Make the prompt even stricter and specify the required schema
     const prompt = `${userPrompt}
 
+IMPORTANT: Long runs must NEVER exceed 35 km (or 22 miles for imperial units). This is a strict safety limit.
+
 Respond ONLY with a valid JSON object. Do NOT include any text, explanations, comments (such as // or /* ... */), or markdown. Do NOT wrap your response in triple backticks or any other formatting.
 
 The JSON must have the following top-level keys: plan_title, introduction, goals_summary, weekly_breakdown (an array of weeks, each with days, etc). The goals_summary field MUST be a single, readable string summarizing the runner's goals and context, not a JSON object. Output a complete, valid JSON object for the full plan.
@@ -49,13 +51,14 @@ For each week in weekly_breakdown:
 - Do NOT use any other summary fields (like 'key_sessions_summary').
 - Do NOT use any extra fields.
 - The output must be consistent for all weeks and all days.
+- CRITICAL: Long run distances must NEVER exceed 35 km (metric) or 22 miles (imperial).
 
 Example (HR-based week):
 {
   "week": 1,
   "summary": "This week focuses on building aerobic base with a long run on Sunday.",
   "key_sessions": [
-    "Long run of 32 km, mostly easy pace",
+    "Long run of 25 km, mostly easy pace",
     "Tempo run of 12 km at moderate intensity"
   ],
   "total_volume": 110,
@@ -85,6 +88,13 @@ Example (RPE-based week):
 }
 
 Do not use any other summary fields. Always use the 'summary' field for each week. Always use 'heart_rate_range' OR 'rpe_range' as an array of two numbers for every day, never both, and never as a string.`;
+
+    // --- STATUS: Updating from OpenAPI ---
+    console.log(`Updating plan from OpenAPI for plan id: ${plan.id}`);
+    await supabase.from('training_plans').update({
+      status: 'updating',
+      error_message: null
+    }).eq('id', plan.id);
 
     // 3. Call OpenAI to generate the plan (with timeout)
     const timeoutPromise = new Promise((_, reject) =>
@@ -116,12 +126,14 @@ Do not use any other summary fields. Always use the 'summary' field for each wee
           status: 'error',
           error_message: 'OpenAI timed out.'
         }).eq('id', plan.id);
+        console.log(`Plan ${plan.id} update failed: OpenAI timed out.`);
         return;
       } else {
         await supabase.from('training_plans').update({
           status: 'error',
           error_message: err.message
         }).eq('id', plan.id);
+        console.log(`Plan ${plan.id} update failed: ${err.message}`);
         return;
       }
     }
@@ -147,6 +159,7 @@ Do not use any other summary fields. Always use the 'summary' field for each wee
         error_message: 'Invalid JSON from OpenAI',
         plan_json: planContent
       }).eq('id', plan.id);
+      console.log(`Plan ${plan.id} update failed: Invalid JSON from OpenAI.`);
       return;
     }
 
@@ -158,7 +171,7 @@ Do not use any other summary fields. Always use the 'summary' field for each wee
       error_message: null
       // Keep existing chunk_type if it's already set
     }).eq('id', plan.id);
-    console.log(`Plan ${plan.id} generated and saved.`);
+    console.log(`Plan ${plan.id} updated from OpenAPI and saved.`);
 
     // --- Auto-create next chunk if more weeks remain ---
     try {
@@ -289,7 +302,7 @@ Do not use any other summary fields. Always use the 'summary' field for each wee
             `Training history: ${intake?.training_history || 'Not specified'}\n\n` +
             `Weekly Schedule Preferences (user's preferred days for easy runs, sessions, long runs):\n${weeklyScheduleText}\n\n` +
             `${intake?.other_requests ? `Additional user requests: ${intake.other_requests}\n` : ''}` +
-            `\nThis is part of a ${totalWeeks}-week marathon plan. You are creating weeks ${nextStart}-${nextEnd} of ${totalWeeks}.\nDo NOT include the final taper or race week in this chunk.\nInstructions:\n- You are an expert running coach creating weeks ${nextStart}-${nextEnd} of a progressive marathon training plan.\n- This is the DEVELOPMENT or PEAKING phase - gradually increase volume and introduce more structured workouts.\n- Structure the plan so that at least 80% of running is easy, and no more than 20% is moderate/intense.\n- Use the user's preferred days for easy runs, sessions, and long runs as suggestions, but optimize for best training outcomes.\n- For each week, provide a summary of the key sessions to be completed.\n- For each day, suggest a workout (easy run, session, long run, rest, etc.), a mileage target, and a heart rate or RPE range.\n- The sum of daily mileages should match the weekly total.\n- Build progressively on the previous weeks' training if available.\n- Only respond with valid JSON. Do NOT include any explanations, comments, or markdown. Do NOT wrap your response in triple backticks or any other formatting.\n- Output a complete, valid JSON object for weeks ${nextStart} to ${nextEnd} only.\n- For each week in weekly_breakdown, always use the property 'week' (not 'week_number') for the week number.`;
+            `\nThis is part of a ${totalWeeks}-week marathon plan. You are creating weeks ${nextStart}-${nextEnd} of ${totalWeeks}.\nDo NOT include the final taper or race week in this chunk.\nInstructions:\n- You are an expert running coach creating weeks ${nextStart}-${nextEnd} of a progressive marathon training plan.\n- This is the DEVELOPMENT or PEAKING phase - gradually increase volume and introduce more structured workouts.\n- Structure the plan so that at least 80% of running is easy, and no more than 20% is moderate/intense.\n- Use the user's preferred days for easy runs, sessions, and long runs as suggestions, but optimize for best training outcomes.\n- For each week, provide a summary of the key sessions to be completed.\n- For each day, suggest a workout (easy run, session, long run, rest, etc.), a mileage target, and a heart rate or RPE range.\n- The sum of daily mileages should match the weekly total.\n- Build progressively on the previous weeks' training if available.\n- CRITICAL: Long run distances must NEVER exceed 35 km (metric) or 22 miles (imperial). This is a strict safety limit.\n- Only respond with valid JSON. Do NOT include any explanations, comments, or markdown. Do NOT wrap your response in triple backticks or any other formatting.\n- Output a complete, valid JSON object for weeks ${nextStart} to ${nextEnd} only.\n- For each week in weekly_breakdown, always use the property 'week' (not 'week_number') for the week number.`;
           // Insert new pending chunk
           const { data: newChunk, error: insertError } = await supabase.from('training_plans').insert([
             {
