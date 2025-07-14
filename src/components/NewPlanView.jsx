@@ -12,6 +12,37 @@ const NewPlanView = () => {
   const [expandedWeek, setExpandedWeek] = useState(null);
   const [sessionModal, setSessionModal] = useState({ open: false, session: null });
 
+  // Move fetchAllWeeks to the top-level of the component so it is defined and available everywhere it is used.
+  const fetchAllWeeks = async () => {
+    try {
+      const { data: plans, error } = await supabase
+        .from('training_plans')
+        .select('*')
+        .eq('intake_id', planId)
+        .eq('status', 'complete');
+      if (error) throw error;
+      if (!plans || plans.length === 0) {
+        setWeeks([]);
+        return;
+      }
+      let allWeeks = [];
+      for (const p of plans) {
+        if (p.plan_json) {
+          const planData = typeof p.plan_json === 'string' ? JSON.parse(p.plan_json) : p.plan_json;
+          if (planData.weekly_breakdown && Array.isArray(planData.weekly_breakdown)) {
+            allWeeks = allWeeks.concat(planData.weekly_breakdown);
+          }
+        }
+      }
+      allWeeks.sort((a, b) => Number(a.week) - Number(b.week));
+      setWeeks(allWeeks);
+    } catch (err) {
+      // setError('Error loading plan.'); // Original line commented out
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const fetchPlanAndWeeks = async () => {
       try {
@@ -24,36 +55,6 @@ const NewPlanView = () => {
         setPlan(data);
       } catch (err) {
         // setError('Error loading plan.'); // Original line commented out
-      }
-    };
-
-    const fetchAllWeeks = async () => {
-      try {
-        const { data: plans, error } = await supabase
-          .from('training_plans')
-          .select('*')
-          .eq('intake_id', planId)
-          .eq('status', 'complete');
-        if (error) throw error;
-        if (!plans || plans.length === 0) {
-          setWeeks([]);
-          return;
-        }
-        let allWeeks = [];
-        for (const p of plans) {
-          if (p.plan_json) {
-            const planData = typeof p.plan_json === 'string' ? JSON.parse(p.plan_json) : p.plan_json;
-            if (planData.weekly_breakdown && Array.isArray(planData.weekly_breakdown)) {
-              allWeeks = allWeeks.concat(planData.weekly_breakdown);
-            }
-          }
-        }
-        allWeeks.sort((a, b) => Number(a.week) - Number(b.week));
-        setWeeks(allWeeks);
-      } catch (err) {
-        // setError('Error loading plan.'); // Original line commented out
-      } finally {
-        setLoading(false);
       }
     };
 
