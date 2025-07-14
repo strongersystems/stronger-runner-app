@@ -341,7 +341,6 @@ const ViewPlan = () => {
     }, 1000);
 
     // Start polling for status for this week range
-    let backendReady = false;
     const poll = setInterval(async () => {
       const { data: plans } = await supabase
         .from('training_plans')
@@ -350,7 +349,6 @@ const ViewPlan = () => {
         .eq('week_range', rangeKey);
       if (plans && plans.length > 0) {
         if (plans[0].status === 'complete' || plans[0].status === 'error') {
-          backendReady = true;
           clearInterval(poll);
           // Only re-enable after both backend is ready and block timer is done
           const unblock = () => {

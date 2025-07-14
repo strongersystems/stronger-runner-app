@@ -221,16 +221,14 @@ const Predictor = () => {
 
   // Update splitTargetTime when race/units or predicted time changes
   React.useEffect(() => {
-    const finishDist = distances[splitRace];
     const predictedTime = results[splitRace]?.predicted;
     if (predictedTime) {
       setSplitTargetTime(formatSecondsToHHMMSS(Math.round(predictedTime)));
     }
-  }, [splitRace, splitIsImperial, results]);
+  }, [splitRace, splitIsImperial, results, distances]);
 
   // Refined split times table: only show pace per km/mi and key chunks
   const renderSplitCard = () => {
-    const finishDist = distances[splitRace];
     const predictedTime = results[splitRace]?.predicted;
     if (!predictedTime) return null;
 
@@ -242,7 +240,7 @@ const Predictor = () => {
     let paceValue = '';
     if (splitIsImperial) {
       // Imperial splits
-      const totalMiles = finishDist / 1.60934;
+      const totalMiles = distances[splitRace] / 1.60934;
       paceLabel = 'Pace per Mile';
       paceValue = secondsToTime(targetSeconds / totalMiles) + ' /mi';
       if (splitRace === 'Marathon') {
@@ -268,7 +266,7 @@ const Predictor = () => {
     } else {
       // Metric splits
       paceLabel = 'Pace per KM';
-      paceValue = secondsToTime(targetSeconds / finishDist) + ' /km';
+      paceValue = secondsToTime(targetSeconds / distances[splitRace]) + ' /km';
       if (splitRace === 'Marathon') {
         splits = [
           { label: '5K', dist: 5 },
@@ -290,12 +288,12 @@ const Predictor = () => {
           { label: 'Finish', dist: 21.0975 },
         ];
       }
-      splits = splits.filter(s => s.dist <= finishDist + 0.01);
+      splits = splits.filter(s => s.dist <= distances[splitRace] + 0.01);
     }
 
     // Helper to get cumulative time for each split
     const getSplitTime = (dist) => {
-      const total = splitIsImperial ? finishDist / 1.60934 : finishDist;
+      const total = splitIsImperial ? distances[splitRace] / 1.60934 : distances[splitRace];
       return secondsToTime(targetSeconds * (dist / total));
     };
 
