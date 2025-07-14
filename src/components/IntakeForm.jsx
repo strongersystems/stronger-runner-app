@@ -45,7 +45,7 @@ const IntakeForm = () => {
       // Fetch plan and pre-fill form for editing
       const fetchPlan = async () => {
         setLoading(true);
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('training_intakes')
           .select('*')
           .eq('id', planId)

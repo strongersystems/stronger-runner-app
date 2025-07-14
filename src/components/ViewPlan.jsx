@@ -197,7 +197,7 @@ const ViewPlan = () => {
     setRegenerating(true);
     try {
       // Insert a new pending plan row if one doesn't exist
-      const { data: existing, error: checkError } = await supabase
+      const { data: existing } = await supabase
         .from('training_plans')
         .select('*')
         .eq('intake_id', planId)
@@ -343,7 +343,7 @@ const ViewPlan = () => {
     // Start polling for status for this week range
     let backendReady = false;
     const poll = setInterval(async () => {
-      const { data: plans, error } = await supabase
+      const { data: plans } = await supabase
         .from('training_plans')
         .select('status')
         .eq('intake_id', planId)

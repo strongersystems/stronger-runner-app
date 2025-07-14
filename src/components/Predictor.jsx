@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 const Predictor = () => {
   const [results, setResults] = useState({});
   const [showResults, setShowResults] = useState(false);
-  const [isImperial, setIsImperial] = useState(false);
   const [raceEntries, setRaceEntries] = useState([
     { distance: '5K', h: 0, m: 0, s: 0 }
   ]); // Start with one blank row
