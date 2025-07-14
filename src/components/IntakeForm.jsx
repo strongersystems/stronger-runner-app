@@ -81,8 +81,6 @@ const IntakeForm = () => {
   // Update mileage max when unit changes
   const mileageMax = formData.unitPreference === 'metric' ? 160 : 100;
   const mileageLabel = formData.unitPreference === 'metric' ? 'km' : 'miles';
-  const weightLabel = 'kg';
-  const heightLabel = 'cm';
 
   // If current mileage is above new max, clamp it
   useEffect(() => {

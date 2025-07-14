@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import supabase from '../supabaseClient';
 
-const MAX_WEEKS = 16;
-
 const NewPlanView = () => {
   const { planId } = useParams();
   const [plan, setPlan] = useState(null);

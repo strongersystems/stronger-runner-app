@@ -7,7 +7,6 @@ const SessionDetailsModal = ({ session, onClose, unitPreference }) => {
 
   const { session_details } = session;
   const unit = unitPreference === 'metric' ? 'km' : 'miles';
-  const paceUnit = unitPreference === 'metric' ? 'min/km' : 'min/mile';
 
   return (
     <div style={{
