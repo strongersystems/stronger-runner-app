@@ -171,7 +171,7 @@ const IntakeForm = () => {
           .select());
       }
 
-      console.log('Supabase response:', { data, error });
+      console.log('Supabase response:', { data });
 
       // Compose the prompt for the background function
       const userData = { ...dbData, id: data[0].id };

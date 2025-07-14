@@ -7,24 +7,22 @@ const Signup = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
 
   const handleSignup = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
     setSuccess('');
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setSuccess('Passwords do not match');
       setLoading(false);
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setSuccess('Password must be at least 6 characters');
       setLoading(false);
       return;
     }
@@ -44,7 +42,7 @@ const Signup = () => {
         }, 2000);
       }
     } catch (error) {
-      setError(error.message);
+      setSuccess(error.message);
     } finally {
       setLoading(false);
     }
@@ -68,20 +66,6 @@ const Signup = () => {
         }}>
           Create Account
         </h1>
-
-        {error && (
-          <div style={{ 
-            background: 'rgba(220, 38, 38, 0.1)', 
-            color: 'var(--error)', 
-            padding: '12px', 
-            borderRadius: '8px', 
-            marginBottom: '20px',
-            border: '1px solid var(--error)',
-            fontSize: '14px'
-          }}>
-            {error}
-          </div>
-        )}
 
         {success && (
           <div style={{ 

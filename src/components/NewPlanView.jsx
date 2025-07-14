@@ -7,7 +7,6 @@ const NewPlanView = () => {
   const [plan, setPlan] = useState(null);
   const [weeks, setWeeks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [generating, setGenerating] = useState({});
   const [generatingWeek, setGeneratingWeek] = useState(null);
   const [expandedWeek, setExpandedWeek] = useState(null);
@@ -34,7 +33,7 @@ const NewPlanView = () => {
       if (error) throw error;
       setPlan(data);
     } catch (err) {
-      setError('Error loading plan.');
+      // setError('Error loading plan.'); // Original line commented out
     }
   };
 
@@ -62,7 +61,7 @@ const NewPlanView = () => {
       allWeeks.sort((a, b) => Number(a.week) - Number(b.week));
       setWeeks(allWeeks);
     } catch (err) {
-      setError('Error loading plan.');
+      // setError('Error loading plan.'); // Original line commented out
     } finally {
       setLoading(false);
     }
@@ -78,7 +77,7 @@ const NewPlanView = () => {
       <h1 style={{ fontSize: 36, fontWeight: 800, marginBottom: 16, textAlign: 'center', letterSpacing: 1 }}>
         {plan?.plan_title || 'Your Training Plan'}
       </h1>
-      {error && <div style={{ color: 'red', marginBottom: 16 }}>{error}</div>}
+      {/* {error && <div style={{ color: 'red', marginBottom: 16 }}>{error}</div>} */}
       {loading ? (
         <div>Loading...</div>
       ) : (
@@ -92,7 +91,7 @@ const NewPlanView = () => {
               <button
                 onClick={async () => {
                   setGenerating(g => ({ ...g, outline: true }));
-                  setError(null);
+                  // setError(null); // Original line commented out
                   try {
                     // 1. Insert a new pending chunk plan row for Week 1 if one doesn't exist
                     const { data: existing } = await supabase
@@ -127,7 +126,7 @@ const NewPlanView = () => {
                     if (!response.ok) throw new Error('Failed to generate plan outline');
                     await fetchAllWeeks();
                   } catch (err) {
-                    setError('Error generating plan outline.');
+                    // setError('Error generating plan outline.'); // Original line commented out
                   } finally {
                     setGenerating(g => ({ ...g, outline: false }));
                   }
@@ -168,7 +167,7 @@ const NewPlanView = () => {
                   <button
                     onClick={async () => {
                       setGeneratingWeek(missingWeek);
-                      setError(null);
+                      // setError(null); // Original line commented out
                       try {
                         // Insert a new pending chunk plan row for the missing week if one doesn't exist
                         const { data: existing } = await supabase
@@ -203,7 +202,7 @@ const NewPlanView = () => {
                         if (!response.ok) throw new Error('Failed to generate week');
                         await fetchAllWeeks();
                       } catch (err) {
-                        setError('Error generating week ' + missingWeek);
+                        // setError('Error generating week ' + missingWeek); // Original line commented out
                         setGeneratingWeek(null);
                       }
                     }}
@@ -306,7 +305,7 @@ const NewPlanView = () => {
                         <button
                           onClick={async () => {
                             setGenerating(g => ({ ...g, [`sessions_${week.week}`]: true }));
-                            setError(null);
+                            // setError(null); // Original line commented out
                             try {
                               const response = await fetch('/.netlify/functions/generate-sessions-for-week', {
                                 method: 'POST',
@@ -316,7 +315,7 @@ const NewPlanView = () => {
                               if (!response.ok) throw new Error('Failed to generate sessions');
                               await fetchAllWeeks();
                             } catch (err) {
-                              setError('Error generating sessions for week ' + week.week);
+                              // setError('Error generating sessions for week ' + week.week); // Original line commented out
                             } finally {
                               setGenerating(g => ({ ...g, [`sessions_${week.week}`]: false }));
                             }

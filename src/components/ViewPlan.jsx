@@ -11,7 +11,6 @@ const ViewPlan = () => {
   const [plan, setPlan] = useState(null);
   const [aiPlan, setAiPlan] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [regenerating, setRegenerating] = useState(false);
   const [waitSeconds, setWaitSeconds] = useState(0);
   const [generating, setGenerating] = useState({}); // Track loading per week range
@@ -127,7 +126,6 @@ const ViewPlan = () => {
           setAiPlan(null);
         }
       } catch (error) {
-        setError('Failed to load plan');
         console.error('Error fetching plan:', error);
       } finally {
         setLoading(false);
@@ -197,7 +195,6 @@ const ViewPlan = () => {
   // Add regeneratePlanOutline for robust recovery
   const regeneratePlanOutline = async () => {
     setRegenerating(true);
-    setError('');
     try {
       // Insert a new pending plan row if one doesn't exist
       const { data: existing, error: checkError } = await supabase
@@ -232,7 +229,7 @@ const ViewPlan = () => {
       if (!response.ok) throw new Error('Failed to regenerate plan outline');
       setTimeout(() => window.location.reload(), 2000); // Reload after a short delay
     } catch (err) {
-      setError('Error regenerating plan outline.');
+      console.error('Error regenerating plan outline:', err);
     } finally {
       setRegenerating(false);
     }
@@ -502,7 +499,7 @@ const ViewPlan = () => {
     );
   }
 
-  if (error || !plan) {
+  if (!plan) {
     return (
       <div style={{ 
         textAlign: 'center', 
@@ -587,7 +584,6 @@ const ViewPlan = () => {
             >
               {regenerating ? 'Regenerating Plan Outline...' : 'Regenerate Plan Outline'}
             </button>
-            {error && <div style={{ color: 'red', marginTop: 8 }}>{error}</div>}
             <div style={{ color: '#aaa', fontSize: 14, marginTop: 4 }}>
               If your plan is missing weeks, click to restore the full outline.
             </div>
