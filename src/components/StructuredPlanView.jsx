@@ -9,11 +9,13 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
+import SessionDetailsModal from './SessionDetailsModal';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const StructuredPlanView = ({ aiPlan }) => {
   const [expandedWeeks, setExpandedWeeks] = useState(new Set());
+  const [selectedSession, setSelectedSession] = useState(null);
 
   const toggleWeek = (weekNumber) => {
     setExpandedWeeks(prev => {
@@ -116,15 +118,7 @@ const StructuredPlanView = ({ aiPlan }) => {
   // Get unit preference (default to km)
   const unit = aiPlan.unit_preference === 'imperial' ? 'mi' : 'km';
 
-  // HR zone color helper
-  function getHRZoneColor(hrRange) {
-    if (!Array.isArray(hrRange) || hrRange.length !== 2) return 'var(--bg-card)';
-    const avg = (hrRange[0] + hrRange[1]) / 2;
-    if (avg < 130) return '#1e7e34'; // Green: Easy
-    if (avg < 150) return '#ffc107'; // Yellow: Moderate
-    if (avg < 170) return '#fd7e14'; // Orange: Hard
-    return '#dc3545'; // Red: Very hard
-  }
+
 
   // Replace the day card rendering with improved styles and responsive layout
 
@@ -272,6 +266,20 @@ const StructuredPlanView = ({ aiPlan }) => {
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'flex-start',
+                          cursor: 'pointer',
+                          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                        }}
+                        onClick={() => {
+                          console.log('Clicked day:', day);
+                          setSelectedSession(day);
+                        }}
+                        onMouseOver={(e) => {
+                          e.target.style.transform = 'scale(1.02)';
+                          e.target.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.target.style.transform = 'scale(1)';
+                          e.target.style.boxShadow = '0 1px 4px rgba(0,0,0,0.08)';
                         }}
                       >
                         <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{day.day}</div>
@@ -285,6 +293,14 @@ const StructuredPlanView = ({ aiPlan }) => {
                         {day.rpe_range && (
                           <div style={{ fontSize: 13 }}>RPE: {day.rpe_range[0]}–{day.rpe_range[1]}</div>
                         )}
+                        <div style={{ 
+                          fontSize: 11, 
+                          opacity: 0.8, 
+                          marginTop: '8px',
+                          fontStyle: 'italic'
+                        }}>
+                          Click for details
+                        </div>
                       </div>
                     );
                   })}
@@ -316,6 +332,15 @@ const StructuredPlanView = ({ aiPlan }) => {
           }
         }
       `}</style>
+      
+      {/* Session Details Modal */}
+      {selectedSession && (
+        <SessionDetailsModal
+          session={selectedSession}
+          onClose={() => setSelectedSession(null)}
+          unitPreference={aiPlan.unit_preference}
+        />
+      )}
     </div>
   );
 };

@@ -375,7 +375,7 @@ const Dashboard = () => {
                   borderTop: '1px solid var(--border)',
                   paddingTop: '16px'
                 }}>
-                  <Link to={`/plan/${plan.id}`} style={{ flex: 1, textDecoration: 'none' }}>
+                  <Link to={`/new-plan/${plan.id}`} style={{ flex: 1, textDecoration: 'none' }}>
                     <button className="btn-secondary" style={{ width: '100%', fontSize: '12px', padding: '8px 16px' }}>
                       {plan.ai_plan ? 'View AI Plan' : 'View Details'}
                     </button>

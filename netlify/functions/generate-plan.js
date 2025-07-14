@@ -50,6 +50,15 @@ For each week in weekly_breakdown:
   - 'workout' (e.g., "Easy Run")
   - 'volume' (number, 0 if rest)
   - EITHER 'heart_rate_range' (an array of two numbers, e.g., [120, 140]) OR 'rpe_range' (an array of two numbers, e.g., [4, 6]), depending on the user's training intensity preference. Never include both for the same day.
+  - 'session_details' (object with detailed session information):
+    - 'brief' (string): 2-3 sentence description of the session purpose and approach
+    - 'warmup' (string): Specific warmup instructions (e.g., "10 minutes easy jogging, 5 minutes dynamic stretches")
+    - 'main_set' (string): Detailed main workout description with specific instructions
+    - 'cooldown' (string): Cooldown instructions (e.g., "5 minutes easy jogging, static stretches")
+    - 'target_pace' (string): Target pace range if applicable (e.g., "5:30-5:45 min/km" or "8:45-9:00 min/mile")
+    - 'effort_level' (string): How hard this session should feel (e.g., "Easy conversational pace", "Moderate - can speak in short sentences")
+    - 'tips' (array of strings): 2-3 specific tips for this session
+    - 'equipment' (array of strings): Any equipment needed (e.g., ["Heart rate monitor", "Water bottle"])
 - Do NOT use any other summary fields (like 'key_sessions_summary').
 - Do NOT use any extra fields.
 - The output must be consistent for all weeks and all days.
@@ -65,9 +74,63 @@ Example (HR-based week):
   ],
   "total_volume": 110,
   "days": [
-    { "day": "Monday", "workout": "Easy Run", "volume": 10, "heart_rate_range": [120, 140] },
-    { "day": "Tuesday", "workout": "Rest", "volume": 0, "heart_rate_range": [0, 0] },
-    { "day": "Wednesday", "workout": "Tempo Run", "volume": 12, "heart_rate_range": [145, 165] }
+    { 
+      "day": "Monday", 
+      "workout": "Easy Run", 
+      "volume": 10, 
+      "heart_rate_range": [120, 140],
+      "session_details": {
+        "brief": "Recovery run to start the week. Focus on easy, conversational pace to promote recovery and build aerobic base.",
+        "warmup": "5 minutes easy walking, 5 minutes easy jogging",
+        "main_set": "10 km at easy pace. Keep heart rate in Zone 1-2 range. Should feel very comfortable and conversational.",
+        "cooldown": "5 minutes easy walking, gentle stretching",
+        "target_pace": "6:00-6:30 min/km",
+        "effort_level": "Easy - can hold a conversation throughout",
+        "tips": [
+          "Focus on relaxed breathing and good form",
+          "If you feel tired, slow down - this is a recovery session"
+        ],
+        "equipment": ["Heart rate monitor"]
+      }
+    },
+    { 
+      "day": "Tuesday", 
+      "workout": "Rest", 
+      "volume": 0, 
+      "heart_rate_range": [0, 0],
+      "session_details": {
+        "brief": "Active recovery day. Light cross-training or complete rest.",
+        "warmup": "None required",
+        "main_set": "Complete rest or light cross-training (swimming, cycling, yoga)",
+        "cooldown": "None required",
+        "target_pace": "N/A",
+        "effort_level": "Very light",
+        "tips": [
+          "Listen to your body - if you feel good, light activity is fine",
+          "Focus on recovery and preparation for tomorrow's session"
+        ],
+        "equipment": []
+      }
+    },
+    { 
+      "day": "Wednesday", 
+      "workout": "Tempo Run", 
+      "volume": 12, 
+      "heart_rate_range": [145, 165],
+      "session_details": {
+        "brief": "Tempo run to build lactate threshold. 20 minutes at moderate-hard pace in the middle of the run.",
+        "warmup": "15 minutes easy jogging, 5 minutes dynamic stretches",
+        "main_set": "12 km total: 3 km easy, 6 km at tempo pace (Zone 3-4), 3 km easy",
+        "cooldown": "10 minutes easy jogging, static stretches",
+        "target_pace": "5:15-5:30 min/km for tempo portion",
+        "effort_level": "Moderate-hard - can speak in short sentences during tempo",
+        "tips": [
+          "Start the tempo portion conservatively and build into it",
+          "Focus on maintaining consistent pace during the tempo section"
+        ],
+        "equipment": ["Heart rate monitor", "Water bottle"]
+      }
+    }
     // ...other days...
   ]
 }
@@ -82,9 +145,63 @@ Example (RPE-based week):
   ],
   "total_volume": 105,
   "days": [
-    { "day": "Monday", "workout": "Easy Run", "volume": 10, "rpe_range": [4, 6] },
-    { "day": "Tuesday", "workout": "Intervals", "volume": 12, "rpe_range": [6, 8] },
-    { "day": "Wednesday", "workout": "Rest", "volume": 0, "rpe_range": [0, 0] }
+    { 
+      "day": "Monday", 
+      "workout": "Easy Run", 
+      "volume": 10, 
+      "rpe_range": [4, 6],
+      "session_details": {
+        "brief": "Recovery run following the long run. Focus on easy pace and good form.",
+        "warmup": "5 minutes easy walking, 5 minutes easy jogging",
+        "main_set": "10 km at RPE 4-6. Should feel very comfortable and conversational.",
+        "cooldown": "5 minutes easy walking, gentle stretching",
+        "target_pace": "6:00-6:30 min/km",
+        "effort_level": "Easy - can hold a conversation throughout",
+        "tips": [
+          "Focus on relaxed breathing and good form",
+          "If you feel tired, slow down - this is a recovery session"
+        ],
+        "equipment": []
+      }
+    },
+    { 
+      "day": "Tuesday", 
+      "workout": "Intervals", 
+      "volume": 12, 
+      "rpe_range": [6, 8],
+      "session_details": {
+        "brief": "Interval session to build speed and lactate tolerance. 6x800m with 2-minute recovery.",
+        "warmup": "15 minutes easy jogging, 5 minutes dynamic stretches, 4x100m strides",
+        "main_set": "6x800m at RPE 7-8 with 2-minute easy jog recovery between intervals",
+        "cooldown": "10 minutes easy jogging, static stretches",
+        "target_pace": "3:20-3:30 per 800m",
+        "effort_level": "Hard - can speak only a few words during intervals",
+        "tips": [
+          "Start conservatively and build into the session",
+          "Focus on maintaining consistent pace across all intervals"
+        ],
+        "equipment": ["Stopwatch", "Water bottle"]
+      }
+    },
+    { 
+      "day": "Wednesday", 
+      "workout": "Rest", 
+      "volume": 0, 
+      "rpe_range": [0, 0],
+      "session_details": {
+        "brief": "Active recovery day. Light cross-training or complete rest.",
+        "warmup": "None required",
+        "main_set": "Complete rest or light cross-training (swimming, cycling, yoga)",
+        "cooldown": "None required",
+        "target_pace": "N/A",
+        "effort_level": "Very light",
+        "tips": [
+          "Listen to your body - if you feel good, light activity is fine",
+          "Focus on recovery and preparation for tomorrow's session"
+        ],
+        "equipment": []
+      }
+    }
     // ...other days...
   ]
 }
@@ -105,9 +222,9 @@ Do not use any other summary fields. Always use the 'summary' field for each wee
 
     console.log('Calling OpenAI API...');
     
-    // Set up a timeout Promise (25 seconds)
+    // Set up a timeout Promise (60 seconds)
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error("timeout")), 25000)
+      setTimeout(() => reject(new Error("timeout")), 60000)
     );
 
     try {

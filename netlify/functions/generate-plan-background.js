@@ -30,10 +30,15 @@ async function processPlan(plan) {
     }
     // 2. Build the prompt from plan/intake data
     const userPrompt = plan.prompt || plan.user_prompt || 'Create a running plan.';
+    
+    // Extract user requests from the prompt if they exist
+    const userRequestsMatch = userPrompt.match(/CRITICAL USER REQUIREMENTS: (.+?)(?:\n\n|$)/);
+    const userRequests = userRequestsMatch ? userRequestsMatch[1] : '';
+    
     // Make the prompt even stricter and specify the required schema
     const prompt = `${userPrompt}
 
-IMPORTANT: Long runs must NEVER exceed 35 km (or 22 miles for imperial units). This is a strict safety limit.
+    ${userRequests ? `\n*** CRITICAL REQUIREMENTS - MUST BE FOLLOWED ***\nThe user has specified these non-negotiable requirements: ${userRequests}\nYou MUST incorporate these requirements into the plan structure and weekly schedule.\n*** END CRITICAL REQUIREMENTS ***\n\n` : ''}*** CRITICAL SAFETY LIMITS - NEVER EXCEED ***\n- Long run distances must NEVER exceed 35 km (metric) or 22 miles (imperial). This is a strict safety limit.\n- If the user wants 7 days per week, you MUST include running every single day with NO rest days.\n- These limits are NON-NEGOTIABLE and must be followed exactly.\n*** END CRITICAL SAFETY LIMITS ***\n\nIMPORTANT: Long runs must NEVER exceed 35 km (or 22 miles for imperial units). This is a strict safety limit.
 
 Respond ONLY with a valid JSON object. Do NOT include any text, explanations, comments (such as // or /* ... */), or markdown. Do NOT wrap your response in triple backticks or any other formatting.
 
@@ -48,6 +53,15 @@ For each week in weekly_breakdown:
   - 'workout' (e.g., "Easy Run")
   - 'volume' (number, 0 if rest)
   - EITHER 'heart_rate_range' (an array of two numbers, e.g., [120, 140]) OR 'rpe_range' (an array of two numbers, e.g., [4, 6]), depending on the user's training intensity preference. Never include both for the same day.
+  - 'session_details' (object with detailed session information):
+    - 'brief' (string): 2-3 sentence description of the session purpose and approach
+    - 'warmup' (string): Specific warmup instructions (e.g., "10 minutes easy jogging, 5 minutes dynamic stretches")
+    - 'main_set' (string): Detailed main workout description with specific instructions
+    - 'cooldown' (string): Cooldown instructions (e.g., "5 minutes easy jogging, static stretches")
+    - 'target_pace' (string): Target pace range if applicable (e.g., "5:30-5:45 min/km" or "8:45-9:00 min/mile")
+    - 'effort_level' (string): How hard this session should feel (e.g., "Easy conversational pace", "Moderate - can speak in short sentences")
+    - 'tips' (array of strings): 2-3 specific tips for this session
+    - 'equipment' (array of strings): Any equipment needed (e.g., ["Heart rate monitor", "Water bottle"])
 - Do NOT use any other summary fields (like 'key_sessions_summary').
 - Do NOT use any extra fields.
 - The output must be consistent for all weeks and all days.
@@ -63,9 +77,63 @@ Example (HR-based week):
   ],
   "total_volume": 110,
   "days": [
-    { "day": "Monday", "workout": "Easy Run", "volume": 10, "heart_rate_range": [120, 140] },
-    { "day": "Tuesday", "workout": "Rest", "volume": 0, "heart_rate_range": [0, 0] },
-    { "day": "Wednesday", "workout": "Tempo Run", "volume": 12, "heart_rate_range": [145, 165] }
+    { 
+      "day": "Monday", 
+      "workout": "Easy Run", 
+      "volume": 10, 
+      "heart_rate_range": [120, 140],
+      "session_details": {
+        "brief": "Recovery run to start the week. Focus on easy, conversational pace to promote recovery and build aerobic base.",
+        "warmup": "5 minutes easy walking, 5 minutes easy jogging",
+        "main_set": "10 km at easy pace. Keep heart rate in Zone 1-2 range. Should feel very comfortable and conversational.",
+        "cooldown": "5 minutes easy walking, gentle stretching",
+        "target_pace": "6:00-6:30 min/km",
+        "effort_level": "Easy - can hold a conversation throughout",
+        "tips": [
+          "Focus on relaxed breathing and good form",
+          "If you feel tired, slow down - this is a recovery session"
+        ],
+        "equipment": ["Heart rate monitor"]
+      }
+    },
+    { 
+      "day": "Tuesday", 
+      "workout": "Rest", 
+      "volume": 0, 
+      "heart_rate_range": [0, 0],
+      "session_details": {
+        "brief": "Active recovery day. Light cross-training or complete rest.",
+        "warmup": "None required",
+        "main_set": "Complete rest or light cross-training (swimming, cycling, yoga)",
+        "cooldown": "None required",
+        "target_pace": "N/A",
+        "effort_level": "Very light",
+        "tips": [
+          "Listen to your body - if you feel good, light activity is fine",
+          "Focus on recovery and preparation for tomorrow's session"
+        ],
+        "equipment": []
+      }
+    },
+    { 
+      "day": "Wednesday", 
+      "workout": "Tempo Run", 
+      "volume": 12, 
+      "heart_rate_range": [145, 165],
+      "session_details": {
+        "brief": "Tempo run to build lactate threshold. 20 minutes at moderate-hard pace in the middle of the run.",
+        "warmup": "15 minutes easy jogging, 5 minutes dynamic stretches",
+        "main_set": "12 km total: 3 km easy, 6 km at tempo pace (Zone 3-4), 3 km easy",
+        "cooldown": "10 minutes easy jogging, static stretches",
+        "target_pace": "5:15-5:30 min/km for tempo portion",
+        "effort_level": "Moderate-hard - can speak in short sentences during tempo",
+        "tips": [
+          "Start the tempo portion conservatively and build into it",
+          "Focus on maintaining consistent pace during the tempo section"
+        ],
+        "equipment": ["Heart rate monitor", "Water bottle"]
+      }
+    }
     // ...other days...
   ]
 }
@@ -80,9 +148,63 @@ Example (RPE-based week):
   ],
   "total_volume": 105,
   "days": [
-    { "day": "Monday", "workout": "Easy Run", "volume": 10, "rpe_range": [4, 6] },
-    { "day": "Tuesday", "workout": "Intervals", "volume": 12, "rpe_range": [6, 8] },
-    { "day": "Wednesday", "workout": "Rest", "volume": 0, "rpe_range": [0, 0] }
+    { 
+      "day": "Monday", 
+      "workout": "Easy Run", 
+      "volume": 10, 
+      "rpe_range": [4, 6],
+      "session_details": {
+        "brief": "Recovery run following the long run. Focus on easy pace and good form.",
+        "warmup": "5 minutes easy walking, 5 minutes easy jogging",
+        "main_set": "10 km at RPE 4-6. Should feel very comfortable and conversational.",
+        "cooldown": "5 minutes easy walking, gentle stretching",
+        "target_pace": "6:00-6:30 min/km",
+        "effort_level": "Easy - can hold a conversation throughout",
+        "tips": [
+          "Focus on relaxed breathing and good form",
+          "If you feel tired, slow down - this is a recovery session"
+        ],
+        "equipment": []
+      }
+    },
+    { 
+      "day": "Tuesday", 
+      "workout": "Intervals", 
+      "volume": 12, 
+      "rpe_range": [6, 8],
+      "session_details": {
+        "brief": "Interval session to build speed and lactate tolerance. 6x800m with 2-minute recovery.",
+        "warmup": "15 minutes easy jogging, 5 minutes dynamic stretches, 4x100m strides",
+        "main_set": "6x800m at RPE 7-8 with 2-minute easy jog recovery between intervals",
+        "cooldown": "10 minutes easy jogging, static stretches",
+        "target_pace": "3:20-3:30 per 800m",
+        "effort_level": "Hard - can speak only a few words during intervals",
+        "tips": [
+          "Start conservatively and build into the session",
+          "Focus on maintaining consistent pace across all intervals"
+        ],
+        "equipment": ["Stopwatch", "Water bottle"]
+      }
+    },
+    { 
+      "day": "Wednesday", 
+      "workout": "Rest", 
+      "volume": 0, 
+      "rpe_range": [0, 0],
+      "session_details": {
+        "brief": "Active recovery day. Light cross-training or complete rest.",
+        "warmup": "None required",
+        "main_set": "Complete rest or light cross-training (swimming, cycling, yoga)",
+        "cooldown": "None required",
+        "target_pace": "N/A",
+        "effort_level": "Very light",
+        "tips": [
+          "Listen to your body - if you feel good, light activity is fine",
+          "Focus on recovery and preparation for tomorrow's session"
+        ],
+        "equipment": []
+      }
+    }
     // ...other days...
   ]
 }
@@ -173,171 +295,7 @@ Do not use any other summary fields. Always use the 'summary' field for each wee
     }).eq('id', plan.id);
     console.log(`Plan ${plan.id} updated from OpenAPI and saved.`);
 
-    // --- Auto-create next chunk if more weeks remain ---
-    try {
-      // Try to get total plan length and current chunk info
-      let totalWeeks = null; // Don't default - we need to get it from intake
-      let thisChunkStart = 1, thisChunkEnd = 4;
-      let intake = null;
-      let weeklySchedule = null;
-      // FIRST: Get all intake data (most reliable)
-      if (plan.intake_id) {
-        try {
-          const { data: intakeData } = await supabase
-            .from('training_intakes')
-            .select('*')
-            .eq('id', plan.intake_id)
-            .single();
-          if (intakeData) {
-            intake = intakeData;
-            console.log(`[AUTO-CHUNK] Intake data:`, intake);
-            if (intake.plan_length) {
-              const intakeMatch = intake.plan_length.match(/(\d+)/);
-              if (intakeMatch) {
-                totalWeeks = parseInt(intakeMatch[1], 10);
-                console.log(`[AUTO-CHUNK] Got total weeks from intake: ${totalWeeks}`);
-              } else {
-                console.log(`[AUTO-CHUNK] Could not parse plan_length: ${intake.plan_length}`);
-              }
-            } else {
-              console.log(`[AUTO-CHUNK] No plan_length found in intake`);
-            }
-          }
-        } catch (intakeErr) {
-          console.log(`[AUTO-CHUNK] Could not fetch intake data:`, intakeErr.message);
-        }
-      }
-      // SECOND: Parse week range from prompt
-      if (plan.prompt) {
-        // Try to match 'weeks X-Y' or 'weeks X to Y' or 'week X-Y'
-        const match = plan.prompt.match(/weeks?\s*(\d+)\s*[-to]+\s*(\d+)/i);
-        if (match) {
-          thisChunkStart = parseInt(match[1], 10);
-          thisChunkEnd = parseInt(match[2], 10);
-        } else {
-          // Try to match a single week (e.g., 'week 1')
-          const singleMatch = plan.prompt.match(/week\s*(\d+)/i);
-          if (singleMatch) {
-            thisChunkStart = parseInt(singleMatch[1], 10);
-            thisChunkEnd = thisChunkStart;
-          }
-        }
-        // Fallback: look for "X-week" or "X weeks" pattern in prompt
-        const totalMatch = plan.prompt.match(/(\d+)\s*[- ]*week\s*plan/i) || 
-                          plan.prompt.match(/(\d+)\s*[- ]*week\s*marathon/i) ||
-                          plan.prompt.match(/(\d+)\s*[- ]*week\s*training/i) ||
-                          plan.prompt.match(/(\d+)\s*[- ]*week/i);
-        if (totalMatch) {
-          const promptWeeks = parseInt(totalMatch[1], 10);
-          if (promptWeeks) {
-            totalWeeks = promptWeeks;
-            console.log(`[AUTO-CHUNK] Got total weeks from prompt: ${totalWeeks}`);
-          }
-        }
-      }
-      // Try to get from plan_json if available
-      if (structuredPlan && Array.isArray(structuredPlan.weekly_breakdown)) {
-        const maxWeek = Math.max(...structuredPlan.weekly_breakdown.map(w => w.week || 0));
-        if (!thisChunkEnd || isNaN(thisChunkEnd) || thisChunkEnd < 1) {
-          thisChunkEnd = maxWeek;
-        } else if (maxWeek > thisChunkEnd) {
-          thisChunkEnd = maxWeek;
-        }
-      }
-      console.log(`[AUTO-CHUNK] Parsed: thisChunkStart=${thisChunkStart}, thisChunkEnd=${thisChunkEnd}, totalWeeks=${totalWeeks}`);
-      // If more weeks remain, insert next chunk
-      if (totalWeeks && thisChunkEnd < totalWeeks) {
-        let nextStart = thisChunkEnd + 1;
-        let nextEnd = Math.min(thisChunkEnd + 4, totalWeeks);
-        // Fallback: if nextStart is not a valid number, set to 1
-        if (!nextStart || isNaN(nextStart) || nextStart < 1) nextStart = 1;
-        if (!nextEnd || isNaN(nextEnd) || nextEnd < nextStart) nextEnd = nextStart + 3;
-        // Only insert if not already present (and only one pending chunk per week range)
-        const { data: existing, error: findErr } = await supabase
-          .from('training_plans')
-          .select('*')
-          .eq('intake_id', plan.intake_id)
-          .eq('week_range', `${nextStart}-${nextEnd}`);
-        if (findErr) {
-          console.error(`[AUTO-CHUNK] Error checking for existing chunk:`, findErr);
-        }
-        if (!existing || existing.length === 0) {
-          // --- Build the prompt from scratch using intake data ---
-          let weeklyScheduleText = '';
-          if (plan.weekly_schedule) {
-            // Use from plan if available
-            weeklySchedule = plan.weekly_schedule;
-          } else if (intake && intake.weekly_schedule) {
-            weeklySchedule = intake.weekly_schedule;
-          }
-          if (weeklySchedule) {
-            try {
-              const ws = typeof weeklySchedule === 'string' ? JSON.parse(weeklySchedule) : weeklySchedule;
-              weeklyScheduleText = Object.entries(ws).map(([day, schedule]) => {
-                const available = Object.entries(schedule).filter(([type, checked]) => checked).map(([type]) => {
-                  return type === 'easyRun' ? 'Easy Run' : type === 'session' ? 'Session/Workout' : 'Long Run';
-                });
-                return `${day}: ${available.length > 0 ? available.join(', ') : 'No preference'}`;
-              }).join('\n');
-            } catch (e) {
-              weeklyScheduleText = '';
-            }
-          }
-          // Compose the prompt
-          const unit = intake && intake.unit_preference === 'imperial' ? 'miles' : 'km';
-          const prompt = `Create a detailed ${nextEnd - nextStart + 1}-week segment (weeks ${nextStart}-${nextEnd}) of a marathon training plan for a runner with the following profile:\n\n` +
-            `Age: ${intake?.age || 'Not specified'}\n` +
-            `Weight: ${intake?.weight || 'Not specified'} ${unit === 'km' ? 'kg' : 'lbs'}\n` +
-            `Height: ${intake?.height || 'Not specified'} ${unit === 'km' ? 'cm' : 'inches'}\n` +
-            `Training for: ${intake?.training_for || 'Marathon'}\n` +
-            `Goals: ${intake?.goals || 'Not specified'}\n` +
-            `${intake?.weekly_mileage ? `Current (recent) weekly mileage: ${intake.weekly_mileage} ${unit}.\n` : ''}` +
-            `${intake?.starting_volume ? `Starting weekly volume: ${intake.starting_volume} ${unit}.\n` : ''}` +
-            `${intake?.max_volume ? `Maximum weekly volume: ${intake.max_volume} ${unit}.\n` : ''}` +
-            `Weekly training time: ${intake?.weekly_time || 'Not specified'} hours\n` +
-            `Training intensity preference: ${intake?.training_intensity || 'hr'}\n` +
-            `RPE familiarity: ${intake?.rpe_familiarity || 'Not specified'}\n` +
-            `Max heart rate: ${intake?.max_hr || 'Not specified'} bpm\n` +
-            `Resting heart rate: ${intake?.resting_hr || 'Not specified'} bpm\n` +
-            `Training history: ${intake?.training_history || 'Not specified'}\n\n` +
-            `Weekly Schedule Preferences (user's preferred days for easy runs, sessions, long runs):\n${weeklyScheduleText}\n\n` +
-            `${intake?.other_requests ? `Additional user requests: ${intake.other_requests}\n` : ''}` +
-            `\nThis is part of a ${totalWeeks}-week marathon plan. You are creating weeks ${nextStart}-${nextEnd} of ${totalWeeks}.\nDo NOT include the final taper or race week in this chunk.\nInstructions:\n- You are an expert running coach creating weeks ${nextStart}-${nextEnd} of a progressive marathon training plan.\n- This is the DEVELOPMENT or PEAKING phase - gradually increase volume and introduce more structured workouts.\n- Structure the plan so that at least 80% of running is easy, and no more than 20% is moderate/intense.\n- Use the user's preferred days for easy runs, sessions, and long runs as suggestions, but optimize for best training outcomes.\n- For each week, provide a summary of the key sessions to be completed.\n- For each day, suggest a workout (easy run, session, long run, rest, etc.), a mileage target, and a heart rate or RPE range.\n- The sum of daily mileages should match the weekly total.\n- Build progressively on the previous weeks' training if available.\n- CRITICAL: Long run distances must NEVER exceed 35 km (metric) or 22 miles (imperial). This is a strict safety limit.\n- Only respond with valid JSON. Do NOT include any explanations, comments, or markdown. Do NOT wrap your response in triple backticks or any other formatting.\n- Output a complete, valid JSON object for weeks ${nextStart} to ${nextEnd} only.\n- For each week in weekly_breakdown, always use the property 'week' (not 'week_number') for the week number.`;
-          // Insert new pending chunk
-          const { data: newChunk, error: insertError } = await supabase.from('training_plans').insert([
-            {
-              user_id: plan.user_id,
-              intake_id: plan.intake_id,
-              status: 'pending',
-              prompt,
-              week_range: `${nextStart}-${nextEnd}`,
-              chunk_type: 'chunk',
-              error_message: null
-            }
-          ]).select().single();
-          
-          if (insertError) {
-            console.error(`[AUTO-CHUNK] Error creating next chunk:`, insertError);
-          } else {
-            console.log(`[AUTO-CHUNK] Auto-created next chunk: weeks ${nextStart}-${nextEnd}`);
-            // Immediately process the newly created chunk
-            console.log(`[AUTO-CHUNK] Immediately processing newly created chunk...`);
-            await processPlan(newChunk);
-          }
-        } else {
-          console.log(`[AUTO-CHUNK] Next chunk weeks ${nextStart}-${nextEnd} already exists or is pending.`);
-        }
-      } else if (totalWeeks) {
-        console.log('[AUTO-CHUNK] No more weeks to generate. Plan is complete.');
-      } else {
-        console.log('[AUTO-CHUNK] Could not determine total weeks - stopping chunk generation.');
-      }
-    } catch (autoErr) {
-      console.error('Error auto-creating next chunk:', autoErr);
-      await supabase.from('training_plans').update({
-        error_message: `Auto-chunk error: ${autoErr.message}`
-      }).eq('id', plan.id);
-    }
+    // Auto-chunking logic removed. No new chunks will be created automatically.
   } catch (err) {
     console.error('Unexpected error for plan', plan.id, err);
     await supabase.from('training_plans').update({
@@ -376,6 +334,12 @@ exports.handler = async function(event, context) {
           }
           // Process all pending plans for this intake
           for (const plan of pendingPlans) {
+            // If only_week_1 flag is set, modify the prompt to only request the correct week number
+            if (body.only_week_1 && body.week_number) {
+              plan.prompt = (plan.prompt || 'Create a running plan.') + `\n\nIMPORTANT: Only generate week ${body.week_number} in the weekly_breakdown. Do not include any other weeks.`;
+            } else if (body.only_week_1) {
+              plan.prompt = (plan.prompt || 'Create a running plan.') + '\n\nIMPORTANT: Only generate week 1 in the weekly_breakdown. Do not include any other weeks.';
+            }
             await processPlan(plan);
           }
           return {

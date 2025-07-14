@@ -2,17 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import supabase from '../supabaseClient';
 import StructuredPlanView from './StructuredPlanView';
-import EditPlan from './EditPlan';
 
-const safeRender = (value) => {
-  if (typeof value === 'object' && value !== null) {
-    return <pre style={{fontSize:'12px', background:'#222', color:'#fff', padding:'4px', borderRadius:'4px', overflowX:'auto'}}>{JSON.stringify(value, null, 2)}</pre>;
-  }
-  if (Array.isArray(value)) {
-    return value.map((v, i) => <span key={i}>{safeRender(v)}{i < value.length - 1 ? ', ' : ''}</span>);
-  }
-  return value;
-};
+
 
 const ViewPlan = () => {
   const { planId } = useParams();
@@ -23,8 +14,6 @@ const ViewPlan = () => {
   const [error, setError] = useState('');
   const [regenerating, setRegenerating] = useState(false);
   const [waitSeconds, setWaitSeconds] = useState(0);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [planStatus, setPlanStatus] = useState(null);
   const [generating, setGenerating] = useState({}); // Track loading per week range
   const generatingRef = useRef({}); // Ref to block double trigger
   const [blockTimers, setBlockTimers] = useState({}); // Track block countdown per week range
@@ -56,7 +45,7 @@ const ViewPlan = () => {
         // Parse and combine all plan data
         if (aiPlanData && aiPlanData.length > 0) {
           // Find the main plan (full plan) or the first complete plan
-          const mainPlan = aiPlanData.find(p => p.chunk_type === 'full' && p.status === 'complete') || 
+          aiPlanData.find(p => p.chunk_type === 'full' && p.status === 'complete') || 
                           aiPlanData.find(p => p.status === 'complete');
           
           // Find all chunk plans (all statuses)
@@ -176,9 +165,9 @@ const ViewPlan = () => {
       const startingVolume = plan.starting_volume ? `Starting weekly volume: ${plan.starting_volume} ${plan.unit_preference === 'metric' ? 'km' : 'miles'}.` : '';
       const maxVolume = plan.max_volume ? `Maximum weekly volume: ${plan.max_volume} ${plan.unit_preference === 'metric' ? 'km' : 'miles'}.` : '';
       const otherRequests = plan.other_requests ? `Additional user requests: ${plan.other_requests}` : '';
-      const prompt = `\nCreate a detailed 4-week segment (weeks 1-4) of a marathon training plan for a runner with the following profile:\n\nAge: ${plan.age || 'Not specified'}\nWeight: ${plan.weight || 'Not specified'} ${plan.unit_preference === 'metric' ? 'kg' : 'lbs'}\nHeight: ${plan.height || 'Not specified'} ${plan.unit_preference === 'metric' ? 'cm' : 'inches'}\nTraining for: ${plan.training_for}\nGoals: ${plan.goals || 'Not specified'}\n${currentVolume}\n${startingVolume}\n${maxVolume}\nWeekly training time: ${plan.weekly_time} hours\nTraining intensity preference: ${plan.training_intensity}\nRPE familiarity: ${plan.rpe_familiarity}\nMax heart rate: ${plan.max_hr || 'Not specified'} bpm\nResting heart rate: ${plan.resting_hr || 'Not specified'} bpm\nTraining history: ${plan.training_history || 'Not specified'}\n\nWeekly Schedule Preferences (user's preferred days for easy runs, sessions, long runs):\n${weeklyScheduleText}\n\n${otherRequests}\n\nInstructions:\n- You are an expert running coach creating the FIRST 4 WEEKS of a progressive marathon training plan.\n- Structure the plan so that at least 80% of running is easy, and no more than 20% is moderate/intense. Always lean toward easy running and prioritize volume over intensity.\n- Use the user's preferred days for easy runs, sessions, and long runs as suggestions, but optimize for best training outcomes.\n- For each week, provide a summary of the key sessions to be completed (do not assign to specific days in the summary).\n- For each day, suggest a workout (easy run, session, long run, rest, etc.), a mileage target, and ${plan.training_intensity === 'hr' ? 'a heart rate range (bpm)' : 'an RPE value'}. The sum of daily mileages should match the weekly total.\n- This is the STARTING phase of the plan - focus on building consistency and establishing good habits.\n- Only respond with valid JSON. Do NOT include any explanations, comments, or markdown. Do NOT wrap your response in triple backticks or any other formatting. Output a complete, valid JSON object for weeks 1-4 only.`;
+      const prompt = `\nCreate a detailed 4-week segment (weeks 1-4) of a marathon training plan for a runner with the following profile:\n\nAge: ${plan.age || 'Not specified'}\nWeight: ${plan.weight || 'Not specified'} ${plan.unit_preference === 'metric' ? 'kg' : 'lbs'}\nHeight: ${plan.height || 'Not specified'} ${plan.unit_preference === 'metric' ? 'cm' : 'inches'}\nTraining for: ${plan.training_for}\nGoals: ${plan.goals || 'Not specified'}\n${currentVolume}\n${startingVolume}\n${maxVolume}\nWeekly training time: ${plan.weekly_time} hours\nTraining intensity preference: ${plan.training_intensity}\nMax heart rate: ${plan.max_hr || 'Not specified'} bpm\nResting heart rate: ${plan.resting_hr || 'Not specified'} bpm\nTraining history: ${plan.training_history || 'Not specified'}\nDays per week to run: ${plan.days_per_week || 'Not specified'}\n\nWeekly Schedule Preferences (user's preferred days for easy runs, sessions, long runs):\n${weeklyScheduleText}\n\n${otherRequests}\n\nInstructions:\n- You are an expert running coach creating the FIRST 4 WEEKS of a progressive marathon training plan.\n- Structure the plan so that at least 80% of running is easy, and no more than 20% is moderate/intense. Always lean toward easy running and prioritize volume over intensity.\n- Use the user's preferred days for easy runs, sessions, and long runs as suggestions, but optimize for best training outcomes.\n- For each week, provide a summary of the key sessions to be completed (do not assign to specific days in the summary).\n- For each day, suggest a workout (easy run, session, long run, rest, etc.), a mileage target, and ${plan.training_intensity === 'hr' ? 'a heart rate range (bpm)' : 'an RPE value'}.\n- Each day must also include detailed 'session_details' with:\n  - 'brief': 2-3 sentence description of the session purpose and approach\n  - 'warmup': Specific warmup instructions (e.g., "10 minutes easy jogging, 5 minutes dynamic stretches")\n  - 'main_set': Detailed main workout description with specific instructions\n  - 'cooldown': Cooldown instructions (e.g., "5 minutes easy jogging, static stretches")\n  - 'target_pace': Target pace range if applicable (e.g., "5:30-5:45 min/km" or "8:45-9:00 min/mile")\n  - 'effort_level': How hard this session should feel (e.g., "Easy conversational pace", "Moderate - can speak in short sentences")\n  - 'tips': 2-3 specific tips for this session\n  - 'equipment': Any equipment needed (e.g., ["Heart rate monitor", "Water bottle"])\n- The sum of daily mileages should match the weekly total.\n- This is the STARTING phase of the plan - focus on building consistency and establishing good habits.\n- Only respond with valid JSON. Do NOT include any explanations, comments, or markdown. Do NOT wrap your response in triple backticks or any other formatting. Output a complete, valid JSON object for weeks 1-4 only.`;
       // Create a new chunk plan entry (first 4 weeks)
-      const { data: newPlan, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('training_plans')
         .insert([{
           user_id: plan.user_id,
@@ -205,6 +194,50 @@ const ViewPlan = () => {
     }
   };
 
+  // Add regeneratePlanOutline for robust recovery
+  const regeneratePlanOutline = async () => {
+    setRegenerating(true);
+    setError('');
+    try {
+      // Insert a new pending plan row if one doesn't exist
+      const { data: existing, error: checkError } = await supabase
+        .from('training_plans')
+        .select('*')
+        .eq('intake_id', planId)
+        .is('week_range', null)
+        .eq('status', 'pending');
+      if (!existing || existing.length === 0) {
+        // Get user_id and prompt from intake
+        const { data: intake } = await supabase
+          .from('training_intakes')
+          .select('*')
+          .eq('id', planId)
+          .single();
+        await supabase.from('training_plans').insert([{
+          user_id: intake.user_id,
+          intake_id: planId,
+          status: 'pending',
+          prompt: intake.prompt || 'Create a running plan.',
+          week_range: null,
+          chunk_type: null,
+          error_message: null
+        }]);
+      }
+      // Trigger background function
+      const response = await fetch('/.netlify/functions/generate-plan-background', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trigger: 'manual', intake_id: planId })
+      });
+      if (!response.ok) throw new Error('Failed to regenerate plan outline');
+      setTimeout(() => window.location.reload(), 2000); // Reload after a short delay
+    } catch (err) {
+      setError('Error regenerating plan outline.');
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
   // Helper to generate a prompt for a given week range
   const buildPromptForWeeks = (startWeek, endWeek, priorWeeksSummary = '') => {
     // Build comprehensive runner profile
@@ -217,7 +250,7 @@ const ViewPlan = () => {
     const currentVolume = plan.weekly_mileage ? `Current (recent) weekly mileage: ${plan.weekly_mileage} ${plan.unit_preference === 'metric' ? 'km' : 'miles'}.` : '';
     const startingVolume = plan.starting_volume ? `Starting weekly volume: ${plan.starting_volume} ${plan.unit_preference === 'metric' ? 'km' : 'miles'}.` : '';
     const maxVolume = plan.max_volume ? `Maximum weekly volume: ${plan.max_volume} ${plan.unit_preference === 'metric' ? 'km' : 'miles'}.` : '';
-    const otherRequests = plan.other_requests ? `Additional user requests: ${plan.other_requests}` : '';
+    const otherRequests = plan.other_requests ? `CRITICAL USER REQUIREMENTS: ${plan.other_requests}` : '';
 
     // Determine total plan length in weeks (default to 16 if not set)
     const planLengthStr = plan.planLength || '16 Weeks';
@@ -235,10 +268,10 @@ const ViewPlan = () => {
       `${maxVolume}\n` +
       `Weekly training time: ${plan.weekly_time} hours\n` +
       `Training intensity preference: ${plan.training_intensity}\n` +
-      `RPE familiarity: ${plan.rpe_familiarity}\n` +
       `Max heart rate: ${plan.max_hr || 'Not specified'} bpm\n` +
       `Resting heart rate: ${plan.resting_hr || 'Not specified'} bpm\n` +
-      `Training history: ${plan.training_history || 'Not specified'}\n\n` +
+      `Training history: ${plan.training_history || 'Not specified'}\n` +
+      `${plan.days_per_week === 7 ? '*** CRITICAL: The runner wants to run 7 days per week. You MUST create a plan that includes running every single day of the week with NO rest days. This is non-negotiable. ***' : `Days per week to run: ${plan.days_per_week || 'Not specified'}`}\n\n` +
       `Weekly Schedule Preferences (user's preferred days for easy runs, sessions, long runs):\n${weeklyScheduleText}\n\n` +
       `${otherRequests}\n`;
 
@@ -265,13 +298,22 @@ const ViewPlan = () => {
       baseProfile += '\nDo NOT include the final taper or race week in this chunk.';
     }
 
-    baseProfile += `\nInstructions:\n` +
+    baseProfile += `\n${plan.other_requests ? `\n*** CRITICAL REQUIREMENTS - MUST BE FOLLOWED ***\nThe user has specified these non-negotiable requirements: ${plan.other_requests}\nYou MUST incorporate these requirements into the plan structure and weekly schedule.\n*** END CRITICAL REQUIREMENTS ***\n\n` : ''}*** CRITICAL SAFETY LIMITS - NEVER EXCEED ***\n- Long run distances must NEVER exceed 35 km (metric) or 22 miles (imperial). This is a strict safety limit.\n- If the user wants 7 days per week, you MUST include running every single day with NO rest days.\n- These limits are NON-NEGOTIABLE and must be followed exactly.\n*** END CRITICAL SAFETY LIMITS ***\n\nInstructions:\n` +
       `- You are an expert running coach creating weeks ${startWeek}-${endWeek} of a progressive marathon training plan.\n` +
       `- ${phaseInstructions}\n` +
       `- Structure the plan so that at least 80% of running is easy, and no more than 20% is moderate/intense.\n` +
       `- Use the user's preferred days for easy runs, sessions, and long runs as suggestions, but optimize for best training outcomes.\n` +
-      `- For each week, provide a summary of the key sessions to be completed.\n` +
+      `${plan.other_requests ? `- CRITICAL: You MUST incorporate the user's specific requirements above into the plan structure. These are non-negotiable requirements that must be reflected in the weekly schedule.\n` : ''}${plan.days_per_week === 7 ? `- CRITICAL: Since the user wants 7 days per week, you MUST create a plan with running every single day. NO rest days are allowed.\n` : ''}- For each week, provide a summary of the key sessions to be completed.\n` +
       `- For each day, suggest a workout (easy run, session, long run, rest, etc.), a mileage target, and ${plan.training_intensity === 'hr' ? 'a heart rate range (bpm)' : 'an RPE value'}.\n` +
+      `- Each day must also include detailed 'session_details' with:\n` +
+      `  - 'brief': 2-3 sentence description of the session purpose and approach\n` +
+      `  - 'warmup': Specific warmup instructions (e.g., "10 minutes easy jogging, 5 minutes dynamic stretches")\n` +
+      `  - 'main_set': Detailed main workout description with specific instructions\n` +
+      `  - 'cooldown': Cooldown instructions (e.g., "5 minutes easy jogging, static stretches")\n` +
+      `  - 'target_pace': Target pace range if applicable (e.g., "5:30-5:45 min/km" or "8:45-9:00 min/mile")\n` +
+      `  - 'effort_level': How hard this session should feel (e.g., "Easy conversational pace", "Moderate - can speak in short sentences")\n` +
+      `  - 'tips': 2-3 specific tips for this session\n` +
+      `  - 'equipment': Any equipment needed (e.g., ["Heart rate monitor", "Water bottle"])\n` +
       `- The sum of daily mileages should match the weekly total.\n` +
       `- Build progressively on the previous weeks' training if available.\n` +
       `- CRITICAL: Long run distances must NEVER exceed 35 km (metric) or 22 miles (imperial). This is a strict safety limit.\n` +
@@ -288,7 +330,7 @@ const ViewPlan = () => {
     if (generatingRef.current[rangeKey]) return; // Prevent double trigger for this range
     generatingRef.current[rangeKey] = true;
     setGenerating(prev => ({ ...prev, [rangeKey]: true }));
-    setPlanStatus('pending');
+    setRegenerating(true); // Set regenerating to true when generation starts
     setBlockTimers(prev => ({ ...prev, [rangeKey]: 10 })); // Start 10s block
 
     // Start countdown timer
@@ -310,7 +352,6 @@ const ViewPlan = () => {
         .eq('intake_id', planId)
         .eq('week_range', rangeKey);
       if (plans && plans.length > 0) {
-        setPlanStatus(plans[0].status);
         if (plans[0].status === 'complete' || plans[0].status === 'error') {
           backendReady = true;
           clearInterval(poll);
@@ -319,6 +360,7 @@ const ViewPlan = () => {
             setGenerating(prev => ({ ...prev, [rangeKey]: false }));
             generatingRef.current[rangeKey] = false;
             setBlockTimers(prev => ({ ...prev, [rangeKey]: 0 }));
+            setRegenerating(false); // Set regenerating to false when generation finishes
           };
           if (countdown <= 0) {
             unblock();
@@ -332,7 +374,7 @@ const ViewPlan = () => {
           }
         }
       } else {
-        setPlanStatus('pending');
+        // Plan status is pending
       }
     }, 2000);
 
@@ -368,7 +410,7 @@ const ViewPlan = () => {
       // Debug: log before insert
       console.log(`Inserting new plan chunk for weeks ${startWeek}-${endWeek} with intake_id:`, planId);
       // Create a new plan entry for this chunk
-      const { data: newPlan, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('training_plans')
         .insert([{
           user_id: plan.user_id,
@@ -383,13 +425,14 @@ const ViewPlan = () => {
         .single();
 
       // Debug: log after insert
-      console.log('Insert result:', { newPlan, insertError });
+      console.log('Insert result:', { insertError });
 
       if (insertError) {
         console.error('Error creating chunk plan:', insertError);
         alert(`Failed to create plan chunk for weeks ${startWeek}-${endWeek}: ${insertError.message}`);
         setGenerating(prev => ({ ...prev, [rangeKey]: false }));
         generatingRef.current[rangeKey] = false;
+        setRegenerating(false); // Ensure regenerating is false on error
         return;
       }
 
@@ -408,13 +451,14 @@ const ViewPlan = () => {
           })
         });
         console.log('Background function triggered for weeks', startWeek, '-', endWeek);
-      } catch (error) {
-        console.log('Background function trigger failed (will run on schedule):', error);
+      } catch {
+        console.log('Background function trigger failed (will run on schedule)');
       }
 
     } catch (err) {
       setGenerating(prev => ({ ...prev, [rangeKey]: false }));
       generatingRef.current[rangeKey] = false;
+      setRegenerating(false); // Ensure regenerating is false on error
       alert('Failed to generate weeks.');
       console.error('generateWeeks error:', err);
     }
@@ -509,9 +553,47 @@ const ViewPlan = () => {
   }
   // Show plan if JSON parses, even if status is error
   if (aiPlan && aiPlan.plan_parse_error === null && aiPlan.weekly_breakdown) {
+    // Check if the outline is incomplete (e.g., only 1 week, or missing weeks)
+    const weeks = aiPlan.weekly_breakdown;
+    const weekNumbers = weeks.map(w => Number(w.week)).sort((a, b) => a - b);
+    let missingWeek = null;
+    for (let i = 1; i <= (weekNumbers[weekNumbers.length - 1] || 1); i++) {
+      if (!weekNumbers.includes(i)) {
+        missingWeek = i;
+        break;
+      }
+    }
+    const isIncomplete = weeks.length < 2 || missingWeek !== null;
     return (
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '20px' }}>
-        {/* Generate Weeks Buttons */}
+        {/* Regenerate Plan Outline Button if incomplete */}
+        {isIncomplete && (
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <button
+              className="btn"
+              onClick={regeneratePlanOutline}
+              disabled={regenerating}
+              style={{
+                background: regenerating ? '#444' : '#ff6600',
+                color: '#fff',
+                fontSize: 18,
+                borderRadius: 8,
+                padding: '12px 32px',
+                marginBottom: 12,
+                cursor: regenerating ? 'not-allowed' : 'pointer',
+                width: 320,
+                maxWidth: '100%'
+              }}
+            >
+              {regenerating ? 'Regenerating Plan Outline...' : 'Regenerate Plan Outline'}
+            </button>
+            {error && <div style={{ color: 'red', marginTop: 8 }}>{error}</div>}
+            <div style={{ color: '#aaa', fontSize: 14, marginTop: 4 }}>
+              If your plan is missing weeks, click to restore the full outline.
+            </div>
+          </div>
+        )}
+        {/* Generate Weeks Buttons, Edit Plan, and Plan View */}
         <div style={{ display: 'flex', gap: '12px', marginBottom: '10px', justifyContent: 'flex-end', alignItems: 'center' }}>
           <button
             className="btn-secondary"
@@ -521,42 +603,6 @@ const ViewPlan = () => {
           >
             🔄
           </button>
-          {weekStatus.map((range, index) => {
-            const rangeKey = `${range.start}-${range.end}`;
-            const isBlocked = !!generating[rangeKey] || (blockTimers[rangeKey] > 0);
-            return (
-              <button
-                key={index}
-                className="btn"
-                onClick={() => generateWeeks(range.start, range.end)}
-                disabled={isBlocked}
-                style={{
-                  background: isBlocked ? 'grey' : (range.hasWeeks ? 'var(--success)' : 'var(--primary)'),
-                  color: 'white',
-                  cursor: isBlocked ? 'not-allowed' : 'pointer',
-                  position: 'relative',
-                  marginRight: '8px'
-                }}
-              >
-                {generating[rangeKey] ? `Generating ${range.label}...` :
-                  range.hasWeeks ? `${range.label} Ready ✓` : `Create ${range.label}`}
-                {generating[rangeKey] && (
-                  <span style={{ marginLeft: 8, color: 'red', fontSize: 16 }}>⏳</span>
-                )}
-                {blockTimers[rangeKey] > 0 && !generating[rangeKey] && (
-                  <span style={{ marginLeft: 8, color: 'orange', fontSize: 14 }}>Blocked {blockTimers[rangeKey]}s</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        {isGenerating && (
-          <div style={{ textAlign: 'center', margin: '20px 0' }}>
-            <div style={{ color: 'red', fontSize: 24 }}>GENERATING...</div>
-          </div>
-        )}
-        {/* Edit Plan Button */}
-        <div style={{ textAlign: 'right', marginBottom: '10px' }}>
           <button
             className="btn"
             onClick={() => navigate(`/intake/${planId}`)}
@@ -605,7 +651,7 @@ const ViewPlan = () => {
             );
           })}
         </div>
-        {isGenerating && (
+        {regenerating && (
           <div style={{ textAlign: 'center', margin: '20px 0' }}>
             <div style={{ color: 'red', fontSize: 24 }}>GENERATING...</div>
           </div>

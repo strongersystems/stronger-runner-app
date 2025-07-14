@@ -19,10 +19,8 @@ const IntakeForm = () => {
     planLength: '12 Weeks',
     trainingHistory: '',
     weeklyTime: 8,
-    weeklyMileage: 40,
     unitPreference: 'metric',
-    trainingIntensity: 'rpe',
-    rpeFamiliarity: 'Somewhat',
+    trainingIntensity: 'hr',
     max_hr: '',
     resting_hr: '',
     goals: '',
@@ -62,10 +60,8 @@ const IntakeForm = () => {
             planLength: data.plan_length || '12 Weeks',
             trainingHistory: data.training_history || '',
             weeklyTime: data.weekly_time || 8,
-            weeklyMileage: data.weekly_mileage || 40,
             unitPreference: data.unit_preference || 'metric',
-            trainingIntensity: data.training_intensity || 'rpe',
-            rpeFamiliarity: data.rpe_familiarity || 'Somewhat',
+            trainingIntensity: data.training_intensity || 'hr',
             max_hr: data.max_hr || '',
             resting_hr: data.resting_hr || '',
             goals: data.goals || '',
@@ -85,8 +81,8 @@ const IntakeForm = () => {
   // Update mileage max when unit changes
   const mileageMax = formData.unitPreference === 'metric' ? 160 : 100;
   const mileageLabel = formData.unitPreference === 'metric' ? 'km' : 'miles';
-  const weightLabel = formData.unitPreference === 'metric' ? 'kg' : 'lbs';
-  const heightLabel = formData.unitPreference === 'metric' ? 'cm' : 'inches';
+  const weightLabel = 'kg';
+  const heightLabel = 'cm';
 
   // If current mileage is above new max, clamp it
   useEffect(() => {
@@ -96,7 +92,7 @@ const IntakeForm = () => {
   }, [formData.unitPreference, formData.weeklyMileage, mileageMax]);
 
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, checked } = e.target;
     if (name === 'aiChooseMaxVolume') {
       setFormData(prev => ({
         ...prev,
@@ -149,10 +145,8 @@ const IntakeForm = () => {
         training_history: formData.trainingHistory,
         goals: formData.goals,
         weekly_time: formData.weeklyTime,
-        weekly_mileage: formData.weeklyMileage,
         unit_preference: formData.unitPreference,
         training_intensity: formData.trainingIntensity,
-        rpe_familiarity: formData.rpeFamiliarity,
         max_hr: formData.max_hr ? parseInt(formData.max_hr) : null,
         resting_hr: formData.resting_hr ? parseInt(formData.resting_hr) : null,
         days_per_week: formData.daysPerWeek,
@@ -164,11 +158,11 @@ const IntakeForm = () => {
 
       console.log('Saving to Supabase with data:', dbData);
       
-      let data, error;
+      let data;
       if (planId) {
         // Update existing plan
         dbData.updated_at = new Date().toISOString();
-        ({ data, error } = await supabase
+        ({ data } = await supabase
           .from('training_intakes')
           .update(dbData)
           .eq('id', planId)
@@ -176,7 +170,7 @@ const IntakeForm = () => {
       } else {
         // Create new plan
         dbData.created_at = new Date().toISOString();
-        ({ data, error } = await supabase
+        ({ data } = await supabase
           .from('training_intakes')
           .insert([dbData])
           .select());
@@ -188,7 +182,10 @@ const IntakeForm = () => {
 
       // Compose the prompt for the background function
       const userData = { ...dbData, id: data[0].id };
-      const daysPerWeekText = `Preferred days per week to run: ${userData.days_per_week || formData.daysPerWeek}`;
+      const daysPerWeek = userData.days_per_week || formData.daysPerWeek;
+      const daysPerWeekText = daysPerWeek === 7 
+        ? `*** CRITICAL: The runner wants to run 7 days per week. You MUST create a plan that includes running every single day of the week with NO rest days. This is non-negotiable. ***`
+        : `Preferred days per week to run: ${daysPerWeek}`;
       const currentVolume = userData.weekly_mileage ? `Current (recent) weekly mileage: ${userData.weekly_mileage} ${userData.unit_preference === 'metric' ? 'km' : 'miles'}.` : '';
       const startingVolume = userData.starting_volume ? `Starting weekly volume: ${userData.starting_volume} ${userData.unit_preference === 'metric' ? 'km' : 'miles'}.` : '';
       let maxVolume = '';
@@ -197,50 +194,15 @@ const IntakeForm = () => {
       } else if (userData.max_volume) {
         maxVolume = `Maximum weekly volume: ${userData.max_volume} ${userData.unit_preference === 'metric' ? 'km' : 'miles'}.`;
       }
-      const otherRequests = userData.other_requests ? `Additional user requests: ${userData.other_requests}` : '';
-      const prompt = `\nCreate a detailed 4-week segment (weeks 1-4) of a marathon training plan for a runner with the following profile:\n\nAge: ${userData.age || 'Not specified'}\nWeight: ${userData.weight || 'Not specified'} ${userData.unit_preference === 'metric' ? 'kg' : 'lbs'}\nHeight: ${userData.height || 'Not specified'} ${userData.unit_preference === 'metric' ? 'cm' : 'inches'}\nTraining for: ${userData.training_for}\nGoals: ${userData.goals || 'Not specified'}\n${currentVolume}\n${startingVolume}\n${maxVolume}\nWeekly training time: ${userData.weekly_time} hours\nTraining intensity preference: ${userData.training_intensity}\nRPE familiarity: ${userData.rpe_familiarity}\nMax heart rate: ${userData.max_hr || 'Not specified'} bpm\nResting heart rate: ${userData.resting_hr || 'Not specified'} bpm\nTraining history: ${userData.training_history || 'Not specified'}\n\n${daysPerWeekText}\n\n${otherRequests}\n\nInstructions:\n- You are an expert running coach creating the FIRST 4 WEEKS of a progressive marathon training plan.\n- Structure the plan so that at least 80% of running is easy, and no more than 20% is moderate/intense. Always lean toward easy running and prioritize volume over intensity.\n- Use the user's preferred number of days per week to run as a guide, and optimize for best training outcomes.\n- For each week, provide a summary of the key sessions to be completed (do not assign to specific days in the summary).\n- For each day, suggest a workout (easy run, session, long run, rest, etc.), a mileage target, and ${userData.training_intensity === 'hr' ? 'a heart rate range (bpm)' : 'an RPE value'}. The sum of daily mileages should match the weekly total.\n- This is the STARTING phase of the plan - focus on building consistency and establishing good habits.\n- Only respond with valid JSON. Do NOT include any explanations, comments, or markdown. Do NOT wrap your response in triple backticks or any other formatting. Output a complete, valid JSON object for weeks 1-4 only.`;
+      const otherRequests = userData.other_requests ? `CRITICAL USER REQUIREMENTS: ${userData.other_requests}` : '';
+      const prompt = `\nCreate a detailed marathon training plan outline for a runner with the following profile:\n\nAge: ${userData.age || 'Not specified'}\nWeight: ${userData.weight || 'Not specified'} ${userData.unit_preference === 'metric' ? 'kg' : 'lbs'}\nHeight: ${userData.height || 'Not specified'} ${userData.unit_preference === 'metric' ? 'cm' : 'inches'}\nTraining for: ${userData.training_for}\nGoals: ${userData.goals || 'Not specified'}\n${currentVolume}\n${startingVolume}\n${maxVolume}\nWeekly training time: ${userData.weekly_time} hours\nTraining intensity preference: ${userData.training_intensity}\nMax heart rate: ${userData.max_hr || 'Not specified'} bpm\nResting heart rate: ${userData.resting_hr || 'Not specified'} bpm\nTraining history: ${userData.training_history || 'Not specified'}\n\n${daysPerWeekText}\n\n${otherRequests}\n\n*** CRITICAL SAFETY LIMITS - NEVER EXCEED ***\n- Long run distances must NEVER exceed 35 km (metric) or 22 miles (imperial). This is a strict safety limit.\n- If the user wants 7 days per week, you MUST include running every single day with NO rest days.\n*** END CRITICAL SAFETY LIMITS ***\n\nIMPORTANT INSTRUCTIONS:\n- You are an expert running coach creating the FULL marathon training plan outline for this runner.\n- The plan should be ${userData.plan_length || '12 weeks'} long.\n${userData.other_requests ? `- CRITICAL: You MUST incorporate the user's specific requirements above into the plan structure. These are non-negotiable requirements that must be reflected in the weekly schedule.\n` : ''}${daysPerWeek === 7 ? `- CRITICAL: Since the user wants 7 days per week, you MUST create a plan with running every single day. NO rest days are allowed.\n` : ''}- For each week, provide:\n  - 'week' (number)\n  - 'summary' (1-2 sentence overview of the week)\n  - 'key_sessions' (array of the most important sessions for the week)\n  - 'total_volume' (number, sum of all daily volumes for the week)\n  - 'days' (array of objects, each with only:\n      - 'day' (e.g., "Monday")\n      - 'workout' (e.g., "Easy Run")\n      - 'volume' (number, 0 if rest)\n    )\n- Do NOT include session_details or any detailed instructions for each day.\n- Do NOT include any extra fields.\n- Respond ONLY with a valid JSON object.\n- The JSON must have the following top-level keys: plan_title, introduction, goals_summary, weekly_breakdown (array of weeks as above).\n- Do NOT include any explanations, comments, or markdown. Do NOT wrap your response in triple backticks or any other formatting.\n\nExample week:\n{\n  "week": 1,\n  "summary": "This week focuses on building aerobic base with a long run on Sunday.",\n  "key_sessions": [\n    "Long run of 25 km, mostly easy pace",\n    "Tempo run of 12 km at moderate intensity"\n  ],\n  "total_volume": 110,\n  "days": [\n    { "day": "Monday", "workout": "Easy Run", "volume": 10 },\n    { "day": "Tuesday", "workout": "Easy Run", "volume": 8 },\n    { "day": "Wednesday", "workout": "Tempo Run", "volume": 12 }\n    // ...other days...\n  ]\n}`;
 
-      // Insert a pending plan for this intake (create as first chunk for better reliability)
-      const { error: planInsertError } = await supabase
-        .from('training_plans')
-        .insert([{
-          user_id: user.id,
-          intake_id: userData.id,
-          status: 'pending',
-          prompt: prompt,
-          chunk_type: 'chunk',
-          week_range: '1-4'
-        }]);
 
-      if (planInsertError) {
-        console.error('Error inserting pending plan:', planInsertError);
-        setError('Failed to queue plan for generation.');
-        setLoading(false);
-        return;
-      }
-
-      setSuccess(planId ? 'Plan updated!' : 'Your first 4 weeks are being generated! This is faster and more reliable. You can generate additional weeks once this is ready.');
+      setSuccess(planId ? 'Plan updated!' : 'Plan outline created! You can now generate detailed sessions for each week.');
       setLoading(false);
       
-      // Trigger background function immediately
-      try {
-        await fetch('/.netlify/functions/generate-plan-background', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            trigger: 'manual',
-            intake_id: userData.id
-          })
-        });
-        console.log('Background function triggered immediately');
-      } catch (error) {
-        console.log('Background function trigger failed (will run on schedule):', error);
-      }
-      
       // Always navigate to dashboard after submit
-      navigate('/dashboard');
+      navigate(`/new-plan/${data[0].id}`);
     } catch (error) {
       setError(error.message);
       setLoading(false);
@@ -315,7 +277,7 @@ const IntakeForm = () => {
           fontWeight: '700',
           marginBottom: '30px'
         }}>
-          {planId ? 'Edit Training Plan' : 'Create Training Plan (First 4 Weeks)'}
+          {planId ? 'Edit Training Plan' : 'Create Training Plan (Full Outline)'}
         </h1>
 
         {error && (
@@ -405,7 +367,7 @@ const IntakeForm = () => {
                   marginBottom: '8px',
                   fontWeight: '500'
                 }}>
-                  Weight ({weightLabel})
+                  Weight (kg)
                 </label>
                 <input
                   type="number"
@@ -422,7 +384,7 @@ const IntakeForm = () => {
                   marginBottom: '8px',
                   fontWeight: '500'
                 }}>
-                  Height ({heightLabel})
+                  Height (cm)
                 </label>
                 <input
                   type="number"
@@ -644,32 +606,10 @@ const IntakeForm = () => {
                 onChange={handleInputChange}
                 style={{ width: '100%' }}
               >
-                <option value="rpe">RPE</option>
-                <option value="hr">Heart Rate</option>
+                <option value="hr">Heart Rate (Recommended)</option>
+                <option value="rpe">RPE Only</option>
               </select>
             </div>
-            {formData.trainingIntensity === 'rpe' && (
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ 
-                  display: 'block', 
-                  color: 'var(--text-light)', 
-                  marginBottom: '8px',
-                  fontWeight: '500'
-                }}>
-                  RPE Familiarity
-                </label>
-                <select
-                  name="rpeFamiliarity"
-                  value={formData.rpeFamiliarity}
-                  onChange={handleInputChange}
-                  style={{ width: '100%' }}
-                >
-                  <option>Not at all</option>
-                  <option>Somewhat</option>
-                  <option>Very Familiar</option>
-                </select>
-              </div>
-            )}
             {formData.trainingIntensity === 'hr' && (
               <div>
                 <div style={{ marginBottom: '15px' }}>
@@ -720,12 +660,12 @@ const IntakeForm = () => {
             style={{ width: '100%', marginTop: '20px', fontSize: '18px', fontWeight: 'bold' }}
             disabled={loading}
           >
-            {planId ? 'Update Plan' : 'Create Training Plan (First 4 Weeks)'}
+            {planId ? 'Update Plan' : 'Create Training Plan (Full Outline)'}
           </button>
           <div style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '8px', textAlign: 'center' }}>
             {planId
               ? 'This will update your plan details. To generate new weeks, use the dashboard after saving.'
-              : 'This will create your plan and generate Weeks 1-4.'}
+              : 'This will create your plan outline for all weeks. You can generate detailed sessions for each week after.'}
           </div>
         </form>
       </div>

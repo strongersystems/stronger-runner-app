@@ -1,79 +1,60 @@
 import React, { useState } from 'react';
 
 const Predictor = () => {
-  const [times, setTimes] = useState({
-    mile: { h: 0, m: 0, s: 0 },
-    fiveK: { h: 0, m: 0, s: 0 },
-    tenK: { h: 0, m: 0, s: 0 },
-    halfMarathon: { h: 0, m: 0, s: 0 },
-    marathon: { h: 0, m: 0, s: 0 }
-  });
-
   const [results, setResults] = useState({});
   const [showResults, setShowResults] = useState(false);
   const [isImperial, setIsImperial] = useState(false);
-  // Set default to Marathon
-  const [selectedDistance, setSelectedDistance] = useState('Marathon');
-  const [paceRange, setPaceRange] = useState(50);
-  const [terrainRange, setTerrainRange] = useState(0);
-  const [tempRange, setTempRange] = useState(0);
   const [splitDistance, setSplitDistance] = useState(1);
   const [splitUnit, setSplitUnit] = useState('km');
   const [paceStrategy, setPaceStrategy] = useState('even');
   const [targetTime, setTargetTime] = useState('');
-  const [showPaceBand, setShowPaceBand] = useState(false);
 
   // Add state for pace band splits
   const [paceBandSplits, setPaceBandSplits] = useState(null);
 
   // New state for flexible race entries
-  const [raceEntries, setRaceEntries] = useState([]); // {distance, h, m, s}
-  const [currentEntry, setCurrentEntry] = useState({ distance: '5K', h: 0, m: 0, s: 0 });
+  const [raceEntries, setRaceEntries] = useState([
+    { distance: '5K', h: 0, m: 0, s: 0 }
+  ]); // Start with one blank row
 
-  const distances = {
-    '1 Mile': 1.60934,
-    '5K': 5,
-    '10K': 10,
-    'Half Marathon': 21.0975,
-    'Marathon': 42.195
+  // Add this state at the top of the component
+  const [selectedDistance, setSelectedDistance] = useState('5K');
+
+  // Add state for split section race and units
+  const [splitRace, setSplitRace] = useState('Marathon');
+  const [splitIsImperial, setSplitIsImperial] = useState(false);
+
+  // Add state for custom target time in split section
+  const [splitTargetTime, setSplitTargetTime] = useState('');
+
+  // Helper for updating a race entry inline
+  const updateRaceEntry = (idx, field, value) => {
+    setRaceEntries(entries => entries.map((entry, i) =>
+      i === idx ? { ...entry, [field]: value } : entry
+    ));
   };
 
-  const fatigueFactor = 1.06;
-
-  const timeToSeconds = (timeObj) => {
-    return timeObj.h * 3600 + timeObj.m * 60 + timeObj.s;
-  };
-
-  const secondsToTime = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-    if (hours) return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const predictTime = (knownTime, knownDist, targetDist) => {
-    return knownTime * Math.pow(targetDist / knownDist, fatigueFactor);
-  };
-
-  // Helper for adding a race entry
+  // Add a new blank row
   const addRaceEntry = () => {
-    if (currentEntry.h === 0 && currentEntry.m === 0 && currentEntry.s === 0) return;
-    setRaceEntries([...raceEntries, { ...currentEntry }]);
-    setCurrentEntry({ distance: '5K', h: 0, m: 0, s: 0 });
-  };
-  const removeRaceEntry = (idx) => {
-    setRaceEntries(raceEntries.filter((_, i) => i !== idx));
+    setRaceEntries([...raceEntries, { distance: '5K', h: 0, m: 0, s: 0 }]);
   };
 
-  // Calculate times using all raceEntries
+  // Remove a row
+  const removeRaceEntry = (idx) => {
+    setRaceEntries(entries => entries.filter((_, i) => i !== idx));
+  };
+
+  // Calculate times using all valid raceEntries
   const calculateTimes = () => {
     // Build inputs object for each distance
     const inputs = {};
     raceEntries.forEach(entry => {
-      const seconds = entry.h * 3600 + entry.m * 60 + entry.s;
-      if (!inputs[entry.distance]) inputs[entry.distance] = [];
-      inputs[entry.distance].push(seconds);
+      // Only use rows with a nonzero time
+      if (entry.h > 0 || entry.m > 0 || entry.s > 0) {
+        const seconds = entry.h * 3600 + entry.m * 60 + entry.s;
+        if (!inputs[entry.distance]) inputs[entry.distance] = [];
+        inputs[entry.distance].push(seconds);
+      }
     });
     // For each distance, predict using all other distances
     const newResults = {};
@@ -103,184 +84,134 @@ const Predictor = () => {
     setShowResults(true);
   };
 
-  const updateTime = (distance, field, value) => {
-    setTimes(prev => ({
-      ...prev,
-      [distance]: {
-        ...prev[distance],
-        [field]: parseInt(value) || 0
-      }
-    }));
-  };
 
-  const renderTimeInput = (distance, timeObj) => {
-    // Map distance names to the correct state keys
-    const distanceKeyMap = {
-      '1 Mile': 'mile',
-      '5K': 'fiveK',
-      '10K': 'tenK',
-      'Half Marathon': 'halfMarathon',
-      'Marathon': 'marathon'
-    };
-    const distanceKey = distanceKeyMap[distance];
-    
-    return (
-      <div style={{ marginBottom: '15px' }}>
-        <label style={{ 
-          display: 'block', 
-          color: 'var(--neon-cyan)', 
-          marginBottom: '5px' 
-        }}>
-          {distance} Time
-        </label>
-        <div style={{ display: 'flex', gap: '5px' }}>
-          <select
-            value={timeObj.h}
-            onChange={(e) => updateTime(distanceKey, 'h', e.target.value)}
-            style={{ width: '70px' }}
-          >
-            {Array.from({ length: 24 }, (_, i) => (
-              <option key={i} value={i}>{i}</option>
-            ))}
-          </select>
-          :
-          <select
-            value={timeObj.m}
-            onChange={(e) => updateTime(distanceKey, 'm', e.target.value)}
-            style={{ width: '70px' }}
-          >
-            {Array.from({ length: 60 }, (_, i) => (
-              <option key={i} value={i}>{i.toString().padStart(2, '0')}</option>
-            ))}
-          </select>
-          :
-          <select
-            value={timeObj.s}
-            onChange={(e) => updateTime(distanceKey, 's', e.target.value)}
-            style={{ width: '70px' }}
-          >
-            {Array.from({ length: 60 }, (_, i) => (
-              <option key={i} value={i}>{i.toString().padStart(2, '0')}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-    );
-  };
 
   // Use isImperial to determine units
   const getDistanceUnit = () => (isImperial ? 'mi' : 'km');
   const getDistanceValue = (km) => (isImperial ? (km / 1.60934) : km);
 
+  // Update renderResultsTable for ±4% range and always show icons
   const renderResultsTable = () => {
+    // Always show these distances
+    const standardDistances = ['1 Mile', '5K', '10K', 'Half Marathon', 'Marathon'];
+    const distanceLabels = {
+      '1 Mile': '1 Mile',
+      '5K': '5K',
+      '10K': '10K',
+      'Half Marathon': 'Half Marathon',
+      'Marathon': 'Marathon',
+    };
     return (
-      <table style={{ 
-        width: '100%', 
-        borderCollapse: 'collapse', 
+      <table style={{
+        width: '100%',
+        borderCollapse: 'collapse',
         marginTop: '20px',
         animation: 'fadeIn 1s ease-in',
-        color: 'var(--text-light)'
+        color: '#f8f8f8',
+        background: 'var(--dark-bg)',
+        borderRadius: 12,
+        overflow: 'hidden',
       }}>
         <thead>
           <tr>
-            <th style={{ 
-              padding: '12px', 
-              textAlign: 'center', 
-              borderBottom: '1px solid var(--medium-bg)',
-              background: 'var(--neon-cyan)',
-              color: 'var(--text-dark)'
+            <th style={{
+              padding: '12px',
+              textAlign: 'center',
+              background: '#23272f',
+              color: '#fff',
+              fontWeight: 800,
+              fontSize: 16,
+              borderBottom: '2px solid #333',
             }}>
-              Distance ({getDistanceUnit()})
+              Distance
             </th>
-            <th style={{ 
-              padding: '12px', 
-              textAlign: 'center', 
-              borderBottom: '1px solid var(--medium-bg)',
-              background: 'var(--neon-cyan)',
-              color: 'var(--text-dark)'
+            <th style={{
+              padding: '12px',
+              textAlign: 'center',
+              background: '#23272f',
+              color: '#fff',
+              fontWeight: 800,
+              fontSize: 16,
+              borderBottom: '2px solid #333',
             }}>
               Actual Time
             </th>
-            <th style={{ 
-              padding: '12px', 
-              textAlign: 'center', 
-              borderBottom: '1px solid var(--medium-bg)',
-              background: 'var(--neon-cyan)',
-              color: 'var(--text-dark)'
+            <th style={{
+              padding: '12px',
+              textAlign: 'center',
+              background: '#23272f',
+              color: '#fff',
+              fontWeight: 800,
+              fontSize: 16,
+              borderBottom: '2px solid #333',
             }}>
               Predicted Time
             </th>
-            <th style={{ 
-              padding: '12px', 
-              textAlign: 'center', 
-              borderBottom: '1px solid var(--medium-bg)',
-              background: 'var(--neon-cyan)',
-              color: 'var(--text-dark)'
+            <th style={{
+              padding: '12px',
+              textAlign: 'center',
+              background: '#23272f',
+              color: '#fff',
+              fontWeight: 800,
+              fontSize: 16,
+              borderBottom: '2px solid #333',
             }}>
-              Range (±3%)
+              Range (±4%)
             </th>
-            <th style={{ 
-              padding: '12px', 
-              textAlign: 'center', 
-              borderBottom: '1px solid var(--medium-bg)',
-              background: 'var(--neon-cyan)',
-              color: 'var(--text-dark)'
+            <th style={{
+              padding: '12px',
+              textAlign: 'center',
+              background: '#23272f',
+              color: '#fff',
+              fontWeight: 800,
+              fontSize: 16,
+              borderBottom: '2px solid #333',
             }}>
               Performance
             </th>
           </tr>
         </thead>
         <tbody>
-          {Object.entries(results).map(([dist, result], index) => {
+          {standardDistances.map((dist, index) => {
+            const result = results[dist] || {};
             let perf = null;
             if (result.actual && result.predicted) {
-              if (result.actual < result.predicted) {
-                perf = <span style={{ color: 'limegreen', fontWeight: 700 }} title="Outperforming">↑</span>;
-              } else if (result.actual > result.predicted) {
-                perf = <span style={{ color: 'red', fontWeight: 700 }} title="Underperforming">↓</span>;
+              const diff = (result.actual - result.predicted) / result.predicted;
+              let color = '', text = '', icon = '';
+              if (diff < -0.08) {
+                color = '#00ff6a'; text = 'Way Faster than Predicted'; icon = '🚀';
+              } else if (diff < -0.05) {
+                color = '#1ed760'; text = 'Faster than Predicted'; icon = '↑';
+              } else if (diff < -0.04) {
+                color = '#00bfae'; text = 'Within Range, Outperforming'; icon = '↗';
+              } else if (diff < 0) {
+                color = '#ffe066'; text = 'Within Range, Slightly Faster'; icon = '↗';
+              } else if (diff < 0.04) {
+                color = '#ffe066'; text = 'Within Range, Slightly Slower'; icon = '↘';
+              } else if (diff < 0.05) {
+                color = '#ffb347'; text = 'Within Range, Slightly Slower'; icon = '↘';
+              } else if (diff < 0.08) {
+                color = '#e4572e'; text = 'Slower than Predicted'; icon = '↓';
               } else {
-                perf = <span style={{ color: 'gold', fontWeight: 700 }} title="On Target">=</span>;
+                color = '#b30000'; text = 'Much Slower than Predicted'; icon = '🛑';
               }
+              perf = (
+                <span title={text} style={{ background: color, color: '#222', borderRadius: 16, padding: '4px 14px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 15 }}>
+                  <span style={{ fontSize: 18 }}>{icon}</span> {text}
+                </span>
+              );
             }
             return (
-              <tr key={dist} style={{ 
-                background: index % 2 === 0 ? 'transparent' : 'var(--medium-bg)',
-                color: 'var(--text-light)'
+              <tr key={dist} style={{
+                background: index % 2 === 0 ? '#23272f' : '#181c24',
+                color: '#f8f8f8',
+                fontSize: 16,
               }}>
-                <td style={{ padding: '12px', textAlign: 'center', borderBottom: '1px solid var(--medium-bg)' }}>
-                  {getDistanceValue(distances[dist]).toFixed(2)} {getDistanceUnit()}
-                </td>
-                <td style={{ 
-                  padding: '12px', 
-                  textAlign: 'center', 
-                  borderBottom: '1px solid var(--medium-bg)',
-                  color: 'var(--neon-yellow)'
-                }}>
-                  {result.actual ? secondsToTime(result.actual) : '-'}
-                </td>
-                <td style={{ 
-                  padding: '12px', 
-                  textAlign: 'center', 
-                  borderBottom: '1px solid var(--medium-bg)',
-                  color: 'var(--neon-blue)'
-                }}>
-                  {result.predicted ? secondsToTime(result.predicted) : '-'}
-                </td>
-                <td style={{ 
-                  padding: '12px', 
-                  textAlign: 'center', 
-                  borderBottom: '1px solid var(--medium-bg)',
-                  color: 'var(--neon-purple)'
-                }}>
-                  {result.lower ? `${secondsToTime(result.lower)} - ${secondsToTime(result.upper)}` : '-'}
-                </td>
-                <td style={{ 
-                  padding: '12px', 
-                  textAlign: 'center', 
-                  borderBottom: '1px solid var(--medium-bg)'
-                }}>
-                  {perf}
-                </td>
+                <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700 }}>{distanceLabels[dist]}</td>
+                <td style={{ padding: '12px', textAlign: 'center', color: '#ffe066', fontWeight: 700 }}>{result.actual ? secondsToTime(result.actual) : '-'}</td>
+                <td style={{ padding: '12px', textAlign: 'center', color: '#6ec1e4', fontWeight: 700 }}>{result.predicted ? secondsToTime(result.predicted) : '-'}</td>
+                <td style={{ padding: '12px', textAlign: 'center', color: '#b388ff', fontWeight: 700 }}>{result.predicted ? `${secondsToTime(result.predicted * 0.96)} - ${secondsToTime(result.predicted * 1.04)}` : '-'}</td>
+                <td style={{ padding: '12px', textAlign: 'center' }}>{perf}</td>
               </tr>
             );
           })}
@@ -289,349 +220,297 @@ const Predictor = () => {
     );
   };
 
-  const renderSplitCard = () => {
-    // Always use Marathon and 5K splits
-    const finishDist = distances['Marathon'];
-    const predictedTime = results['Marathon']?.predicted;
-    if (!predictedTime) return null;
-
-    const splitUnit = getDistanceUnit();
-    const splitInterval = isImperial ? 3.10686 : 5; // 5K or 3.10686mi
-    const maxDist = getDistanceValue(finishDist);
-    const interval = splitInterval;
-
-    const paceSeconds = predictedTime / maxDist;
-    const splits = [];
-    for (let split = interval; split < maxDist; split += interval) {
-      const splitDist = split;
-      const splitTime = paceSeconds * splitDist;
-      splits.push({ distance: split, time: splitTime });
-    }
-    // Add finish
-    splits.push({ distance: maxDist, time: predictedTime });
-
-    return (
-      <div className="card" style={{ 
-        background: 'linear-gradient(135deg, var(--darker-bg), var(--dark-bg))',
-        boxShadow: '0 0 20px rgba(0, 255, 204, 0.3)',
-        textAlign: 'center',
-        color: 'var(--text-light)'
-      }}>
-        <h2 style={{ 
-          color: 'var(--neon-cyan)', 
-          textShadow: '0 0 5px var(--neon-cyan)',
-          marginBottom: '15px'
-        }}>
-          Split Times (5K {isImperial ? '/ 3.1mi' : ''} Splits, Marathon)
-        </h2>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(5, 1fr)', 
-          gap: '5px' 
-        }}>
-          {splits.map((split, index) => (
-            <div key={index} style={{
-              background: 'var(--medium-bg)',
-              padding: '5px',
-              borderRadius: '5px',
-              boxShadow: '0 0 5px rgba(0, 204, 255, 0.2)',
-              color: 'var(--text-light)'
-            }}>
-              <h3 style={{ 
-                margin: '0 0 3px', 
-                color: 'var(--neon-blue)', 
-                fontSize: '14px' 
-              }}>
-                {split.distance.toFixed(2)} {splitUnit}
-              </h3>
-              <p style={{ margin: 0, fontSize: '12px' }}>
-                {secondsToTime(split.time)}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
+  // Helper to format seconds as HH:MM:SS
+  const formatSecondsToHHMMSS = (seconds) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    return [h, m, s].map(v => v.toString().padStart(2, '0')).join(':');
+  };
+  // Helper to parse HH:MM:SS to seconds
+  const parseHHMMSS = (str) => {
+    const parts = str.split(':').map(Number);
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    if (parts.length === 1) return parts[0];
+    return 0;
   };
 
-  const renderPaceBandCard = () => {
-    const generatePaceBand = () => {
-      const totalSeconds = timeToSeconds({
-        h: parseInt(targetTime.split(':')[0]) || 0,
-        m: parseInt(targetTime.split(':')[1]) || 0,
-        s: parseInt(targetTime.split(':')[2]) || 0
-      });
+  // Update splitTargetTime when race/units or predicted time changes
+  React.useEffect(() => {
+    const finishDist = distances[splitRace];
+    const predictedTime = results[splitRace]?.predicted;
+    if (predictedTime) {
+      setSplitTargetTime(formatSecondsToHHMMSS(Math.round(predictedTime)));
+    }
+  }, [splitRace, splitIsImperial, results]);
 
-      if (!totalSeconds || totalSeconds <= 0) {
-        alert('Please enter a valid target time (HH:MM:SS).');
-        return;
+  // Refined split times table: only show pace per km/mi and key chunks
+  const renderSplitCard = () => {
+    const finishDist = distances[splitRace];
+    const predictedTime = results[splitRace]?.predicted;
+    if (!predictedTime) return null;
+
+    // Use splitTargetTime (editable) for splits
+    const targetSeconds = parseHHMMSS(splitTargetTime) || predictedTime;
+
+    let splits = [];
+    let paceLabel = '';
+    let paceValue = '';
+    if (splitIsImperial) {
+      // Imperial splits
+      const totalMiles = finishDist / 1.60934;
+      paceLabel = 'Pace per Mile';
+      paceValue = secondsToTime(targetSeconds / totalMiles) + ' /mi';
+      if (splitRace === 'Marathon') {
+        splits = [
+          { label: '5 Mile', dist: 5 },
+          { label: '10 Mile', dist: 10 },
+          { label: 'Half', dist: 13.1094 },
+          { label: '15 Mile', dist: 15 },
+          { label: '20 Mile', dist: 20 },
+          { label: '25 Mile', dist: 25 },
+          { label: 'Finish', dist: 26.2188 },
+        ];
+      } else {
+        // Half Marathon
+        splits = [
+          { label: '5 Mile', dist: 5 },
+          { label: '10 Mile', dist: 10 },
+          { label: 'Half', dist: 13.1094 },
+          { label: 'Finish', dist: 13.1094 },
+        ];
       }
-
-      const finishDist = distances[selectedDistance];
-      const maxDist = splitUnit === 'km' ? finishDist : finishDist / 1.60934;
-      const interval = parseInt(splitDistance);
-      let splitTimes = [];
-
-      if (paceStrategy === 'even') {
-        const secondsPerInterval = totalSeconds / (Math.floor(maxDist / interval) + 1);
-        for (let split = interval; split <= maxDist; split += interval) {
-          splitTimes.push(secondsPerInterval * (split / interval));
-        }
-      } else if (paceStrategy === 'negative') {
-        const halfDist = maxDist / 2;
-        const firstHalfFactor = 1.02;
-        const secondHalfFactor = 0.98;
-        const firstHalfTime = totalSeconds * 0.51 * firstHalfFactor;
-        const secondHalfTime = totalSeconds * 0.49 * secondHalfFactor;
-        const intervalsPerHalf = Math.floor(halfDist / interval);
-        const firstHalfSeconds = firstHalfTime / intervalsPerHalf;
-        const secondHalfSeconds = secondHalfTime / intervalsPerHalf;
-        let currentTime = 0;
-        for (let split = interval; split <= halfDist; split += interval) {
-          currentTime += firstHalfSeconds;
-          splitTimes.push(currentTime);
-        }
-        for (let split = halfDist + interval; split <= maxDist; split += interval) {
-          currentTime += secondHalfSeconds;
-          splitTimes.push(currentTime);
-        }
-      } else if (paceStrategy === 'positive') {
-        const halfDist = maxDist / 2;
-        const firstHalfFactor = 0.98;
-        const secondHalfFactor = 1.02;
-        const firstHalfTime = totalSeconds * 0.51 * firstHalfFactor;
-        const secondHalfTime = totalSeconds * 0.49 * secondHalfFactor;
-        const intervalsPerHalf = Math.floor(halfDist / interval);
-        const firstHalfSeconds = firstHalfTime / intervalsPerHalf;
-        const secondHalfSeconds = secondHalfTime / intervalsPerHalf;
-        let currentTime = 0;
-        for (let split = interval; split <= halfDist; split += interval) {
-          currentTime += firstHalfSeconds;
-          splitTimes.push(currentTime);
-        }
-        for (let split = halfDist + interval; split <= maxDist; split += interval) {
-          currentTime += secondHalfSeconds;
-          splitTimes.push(currentTime);
-        }
+      splits = splits.filter(s => s.dist <= totalMiles + 0.01);
+    } else {
+      // Metric splits
+      paceLabel = 'Pace per KM';
+      paceValue = secondsToTime(targetSeconds / finishDist) + ' /km';
+      if (splitRace === 'Marathon') {
+        splits = [
+          { label: '5K', dist: 5 },
+          { label: '10K', dist: 10 },
+          { label: '15K', dist: 15 },
+          { label: 'Half Way', dist: 21.0975 },
+          { label: '25K', dist: 25 },
+          { label: '30K', dist: 30 },
+          { label: '35K', dist: 35 },
+          { label: '40K', dist: 40 },
+          { label: 'Finish', dist: 42.195 },
+        ];
+      } else {
+        // Half Marathon
+        splits = [
+          { label: '5K', dist: 5 },
+          { label: '10K', dist: 10 },
+          { label: 'Half Way', dist: 10.54875 },
+          { label: 'Finish', dist: 21.0975 },
+        ];
       }
+      splits = splits.filter(s => s.dist <= finishDist + 0.01);
+    }
 
-      setPaceBandSplits(splitTimes);
+    // Helper to get cumulative time for each split
+    const getSplitTime = (dist) => {
+      const total = splitIsImperial ? finishDist / 1.60934 : finishDist;
+      return secondsToTime(targetSeconds * (dist / total));
     };
 
     return (
-      <div className="card" style={{ 
+      <div className="card" style={{
         background: 'linear-gradient(135deg, var(--darker-bg), var(--dark-bg))',
         boxShadow: '0 0 20px rgba(0, 255, 204, 0.3)',
-        textAlign: 'center'
+        textAlign: 'center',
+        color: 'var(--text-light)',
+        marginTop: 32,
+        padding: 18,
+        maxWidth: 340,
+        marginLeft: 'auto',
+        marginRight: 'auto',
       }}>
-        <h2 style={{ 
-          color: 'var(--neon-cyan)', 
-          textShadow: '0 0 5px var(--neon-cyan)',
-          marginBottom: '15px'
-        }}>
-          Pace Band Generator
-        </h2>
-
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ color: 'var(--neon-cyan)', marginRight: '10px' }}>
-            Target Time (HH:MM:SS):
-          </label>
-          <input
-            type="text"
-            value={targetTime}
-            onChange={(e) => setTargetTime(e.target.value)}
-            placeholder="e.g., 2:00:00"
-            style={{ width: '150px' }}
-          />
-        </div>
-
-        <div style={{ marginBottom: '15px' }}>
-          <label style={{ color: 'var(--neon-cyan)', marginRight: '10px' }}>
-            Pacing Strategy:
-          </label>
-          <select
-            value={paceStrategy}
-            onChange={(e) => setPaceStrategy(e.target.value)}
-            style={{ width: '150px' }}
-          >
-            <option value="even">Even Splits</option>
-            <option value="negative">Negative Splits</option>
-            <option value="positive">Positive Splits</option>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 18, marginBottom: 10 }}>
+          <select value={splitRace} onChange={e => setSplitRace(e.target.value)} style={{ padding: '6px 12px', borderRadius: 8, fontWeight: 700, fontSize: 16, background: '#23272f', color: '#fff', border: 'none', outline: 'none' }}>
+            <option value="Marathon">Marathon</option>
+            <option value="Half Marathon">Half Marathon</option>
+          </select>
+          <select value={splitIsImperial ? 'imperial' : 'metric'} onChange={e => setSplitIsImperial(e.target.value === 'imperial')} style={{ padding: '6px 12px', borderRadius: 8, fontWeight: 700, fontSize: 16, background: '#23272f', color: '#fff', border: 'none', outline: 'none' }}>
+            <option value="metric">Metric (km)</option>
+            <option value="imperial">Imperial (mi)</option>
           </select>
         </div>
-
-        <button
-          onClick={generatePaceBand}
-          className="btn"
-          style={{ marginBottom: '15px' }}
-        >
-          Generate Pace Band
-        </button>
-
-        {paceBandSplits && (
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(5, 1fr)', 
-            gap: '5px' 
-          }}>
-            {paceBandSplits.map((time, index) => (
-              <div key={index} style={{
-                background: 'var(--medium-bg)',
-                padding: '5px',
-                borderRadius: '5px',
-                boxShadow: '0 0 5px rgba(0, 204, 255, 0.2)'
-              }}>
-                <h3 style={{ 
-                  margin: '0 0 3px', 
-                  color: 'var(--neon-blue)', 
-                  fontSize: '14px' 
-                }}>
-                  {(index + 1) * splitDistance} {splitUnit}
-                </h3>
-                <p style={{ margin: 0, fontSize: '12px' }}>
-                  {secondsToTime(time)}
-                </p>
-              </div>
+        <div style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+          <label htmlFor="splitTargetTime" style={{ color: '#6ec1e4', fontWeight: 700 }}>Target Time:</label>
+          <input
+            id="splitTargetTime"
+            type="text"
+            value={splitTargetTime}
+            onChange={e => setSplitTargetTime(e.target.value)}
+            style={{
+              width: 90,
+              padding: '4px 8px',
+              borderRadius: 6,
+              border: '1px solid #444',
+              background: '#181c24',
+              color: '#fff',
+              fontWeight: 700,
+              fontSize: 15,
+              textAlign: 'center',
+              outline: 'none',
+            }}
+            placeholder="HH:MM:SS"
+          />
+        </div>
+        <h2 style={{
+          color: 'var(--neon-cyan)',
+          textShadow: '0 0 5px var(--neon-cyan)',
+          marginBottom: '10px',
+          fontSize: 20,
+        }}>
+          Split Times ({splitRace}, {splitIsImperial ? 'mi' : 'km'})
+        </h2>
+        <table style={{ width: '100%', borderCollapse: 'collapse', margin: '0 auto', background: 'transparent', fontSize: 15 }}>
+          <tbody>
+            <tr>
+              <td style={{ textAlign: 'left', padding: '4px 0', fontWeight: 700, color: '#6ec1e4' }}>{paceLabel}</td>
+              <td style={{ textAlign: 'right', padding: '4px 0', fontWeight: 700, color: '#ffe066' }}>{paceValue}</td>
+            </tr>
+            {splits.map((split, idx) => (
+              <tr key={idx}>
+                <td style={{ textAlign: 'left', padding: '4px 0', fontWeight: 600 }}>{split.label}</td>
+                <td style={{ textAlign: 'right', padding: '4px 0', fontWeight: 700 }}>{getSplitTime(split.dist)}</td>
+              </tr>
             ))}
-            <div style={{
-              background: 'var(--medium-bg)',
-              padding: '5px',
-              borderRadius: '5px',
-              boxShadow: '0 0 5px rgba(0, 204, 255, 0.2)'
-            }}>
-              <h3 style={{ 
-                margin: '0 0 3px', 
-                color: 'var(--neon-blue)', 
-                fontSize: '14px' 
-              }}>
-                Finish ({(splitUnit === 'km' ? distances[selectedDistance] : distances[selectedDistance] / 1.60934).toFixed(splitUnit === 'km' ? 4 : 2)} {splitUnit})
-              </h3>
-              <p style={{ margin: 0, fontSize: '12px' }}>
-                {targetTime}
-              </p>
-            </div>
-          </div>
-        )}
+          </tbody>
+        </table>
       </div>
     );
   };
 
-  // Helper to check if currentEntry is a valid time
-  const isValidTime = currentEntry.h > 0 || currentEntry.m > 0 || currentEntry.s > 0;
+  const timeToSeconds = (timeObj) => {
+    return timeObj.h * 3600 + timeObj.m * 60 + timeObj.s;
+  };
 
-  // UI for entering a recent time
-  const renderRaceEntryInput = () => (
+  const secondsToTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    if (hours) return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const predictTime = (knownTime, knownDist, targetDist) => {
+    return knownTime * Math.pow(targetDist / knownDist, fatigueFactor);
+  };
+
+  const fatigueFactor = 1.06;
+
+  const distances = {
+    '1 Mile': 1.60934,
+    '5K': 5,
+    '10K': 10,
+    'Half Marathon': 21.0975,
+    'Marathon': 42.195
+  };
+
+  // Helper to check if currentEntry is a valid time
+  const isValidTime = (entry) => entry.h > 0 || entry.m > 0 || entry.s > 0;
+
+  // UI for entering/editing recent times as editable rows
+  const renderRaceEntryRows = () => (
     <div className="card" style={{ marginBottom: 20, color: 'var(--text-light)' }}>
-      <h3 style={{ color: 'var(--neon-cyan)', marginBottom: 18, fontWeight: 700, fontSize: 22, textAlign: 'center' }}>Enter a Recent Time</h3>
+      <h3 style={{ color: '#fc5200', marginBottom: 18, fontWeight: 700, fontSize: 22, textAlign: 'center' }}>Enter Recent Times</h3>
       <form style={{
         display: 'flex',
-        flexWrap: 'wrap',
-        justifyContent: 'center',
-        alignItems: 'flex-end',
-        gap: 28,
+        flexDirection: 'column',
+        gap: 12,
         background: 'rgba(255,255,255,0.04)',
         borderRadius: 16,
         padding: '22px 18px 18px 18px',
         boxShadow: '0 1px 8px 0 rgba(0,0,0,0.10)',
-        maxWidth: 600,
+        maxWidth: 700,
         margin: '0 auto 8px',
-      }} onSubmit={e => { e.preventDefault(); if (isValidTime) addRaceEntry(); }}>
-        {/* Distance */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 110 }}>
-          <label style={{ fontSize: 15, fontWeight: 600, marginBottom: 4, color: 'var(--text-light)' }}>🏁 Distance</label>
-          <select
-            value={currentEntry.distance}
-            onChange={e => setCurrentEntry({ ...currentEntry, distance: e.target.value })}
-            style={{
-              padding: '10px 14px',
-              border: 'none',
-              borderRadius: 8,
-              background: 'var(--medium-bg)',
-              color: 'var(--text-light)',
-              fontSize: 17,
-              fontWeight: 500,
-              outline: 'none',
-              height: 44,
-              boxShadow: '0 1px 4px 0 rgba(0,0,0,0.06)',
-              transition: 'box-shadow 0.2s',
-            }}
-          >
-            <option value="1 Mile">1 Mile</option>
-            <option value="5K">5K</option>
-            <option value="10K">10K</option>
-            <option value="Half Marathon">Half Marathon</option>
-            <option value="Marathon">Marathon</option>
-          </select>
-        </div>
-        {/* Hours */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 70 }}>
-          <label style={{ fontSize: 15, fontWeight: 600, marginBottom: 4, color: 'var(--text-light)' }}>⏰ Hours</label>
-          <select
-            value={currentEntry.h}
-            onChange={e => setCurrentEntry({ ...currentEntry, h: parseInt(e.target.value) })}
-            style={{ width: 60, border: 'none', borderRadius: 8, background: 'var(--medium-bg)', color: 'var(--text-light)', fontSize: 17, textAlign: 'center', height: 44, fontWeight: 500, outline: 'none', boxShadow: '0 1px 4px 0 rgba(0,0,0,0.06)', transition: 'box-shadow 0.2s' }}
-          >
-            {Array.from({ length: 11 }, (_, i) => <option key={i} value={i}>{i}</option>)}
-          </select>
-        </div>
-        {/* Minutes */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 70 }}>
-          <label style={{ fontSize: 15, fontWeight: 600, marginBottom: 4, color: 'var(--text-light)' }}>Minutes</label>
-          <select
-            value={currentEntry.m}
-            onChange={e => setCurrentEntry({ ...currentEntry, m: parseInt(e.target.value) })}
-            style={{ width: 60, border: 'none', borderRadius: 8, background: 'var(--medium-bg)', color: 'var(--text-light)', fontSize: 17, textAlign: 'center', height: 44, fontWeight: 500, outline: 'none', boxShadow: '0 1px 4px 0 rgba(0,0,0,0.06)', transition: 'box-shadow 0.2s' }}
-          >
-            {Array.from({ length: 60 }, (_, i) => <option key={i} value={i}>{i}</option>)}
-          </select>
-        </div>
-        {/* Seconds */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 70 }}>
-          <label style={{ fontSize: 15, fontWeight: 600, marginBottom: 4, color: 'var(--text-light)' }}>Seconds</label>
-          <select
-            value={currentEntry.s}
-            onChange={e => setCurrentEntry({ ...currentEntry, s: parseInt(e.target.value) })}
-            style={{ width: 60, border: 'none', borderRadius: 8, background: 'var(--medium-bg)', color: 'var(--text-light)', fontSize: 17, textAlign: 'center', height: 44, fontWeight: 500, outline: 'none', boxShadow: '0 1px 4px 0 rgba(0,0,0,0.06)', transition: 'box-shadow 0.2s' }}
-          >
-            {Array.from({ length: 60 }, (_, i) => <option key={i} value={i}>{i}</option>)}
-          </select>
-        </div>
-        {/* Add Button */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 90 }}>
-          <label style={{ fontSize: 15, fontWeight: 600, marginBottom: 4, color: 'transparent' }}>Add</label>
-          <button
-            type="submit"
-            className="btn"
-            disabled={!isValidTime}
-            style={{
-              background: isValidTime ? 'var(--neon-cyan)' : 'var(--medium-bg)',
-              color: isValidTime ? 'var(--text-dark)' : 'var(--text-muted)',
-              border: 'none',
-              borderRadius: 8,
-              fontWeight: 700,
-              fontSize: 17,
-              padding: '10px 22px',
-              boxShadow: isValidTime ? '0 2px 8px 0 rgba(0,255,204,0.10)' : 'none',
-              cursor: isValidTime ? 'pointer' : 'not-allowed',
-              transition: 'background 0.2s, color 0.2s',
-              height: 44
-            }}
-          >Add</button>
-        </div>
+      }} onSubmit={e => { e.preventDefault(); }}>
+        {raceEntries.map((entry, idx) => (
+          <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', background: 'rgba(255,255,255,0.02)', borderRadius: 10, padding: 10 }}>
+            {/* Distance */}
+            <select
+              value={entry.distance}
+              onChange={e => updateRaceEntry(idx, 'distance', e.target.value)}
+              style={{
+                padding: '10px 18px',
+                border: 'none',
+                borderRadius: 8,
+                background: 'var(--medium-bg)',
+                color: 'var(--text-light)',
+                fontSize: 18,
+                fontWeight: 500,
+                outline: 'none',
+                height: 48,
+                minWidth: 120,
+                boxShadow: '0 1px 4px 0 rgba(0,0,0,0.06)',
+                marginRight: 8
+              }}
+            >
+              <option value="1 Mile">1 Mile</option>
+              <option value="5K">5K</option>
+              <option value="10K">10K</option>
+              <option value="Half Marathon">Half Marathon</option>
+              <option value="Marathon">Marathon</option>
+            </select>
+            {/* Hours */}
+            <select
+              value={entry.h}
+              onChange={e => updateRaceEntry(idx, 'h', parseInt(e.target.value))}
+              style={{ width: 70, border: 'none', borderRadius: 8, background: 'var(--medium-bg)', color: 'var(--text-light)', fontSize: 18, textAlign: 'center', height: 48, fontWeight: 500, outline: 'none', boxShadow: '0 1px 4px 0 rgba(0,0,0,0.06)', padding: '0 8px' }}
+            >
+              {Array.from({ length: 11 }, (_, i) => <option key={i} value={i}>{i}</option>)}
+            </select>
+            <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>h</span>
+            {/* Minutes */}
+            <select
+              value={entry.m}
+              onChange={e => updateRaceEntry(idx, 'm', parseInt(e.target.value))}
+              style={{ width: 70, border: 'none', borderRadius: 8, background: 'var(--medium-bg)', color: 'var(--text-light)', fontSize: 18, textAlign: 'center', height: 48, fontWeight: 500, outline: 'none', boxShadow: '0 1px 4px 0 rgba(0,0,0,0.06)', padding: '0 8px' }}
+            >
+              {Array.from({ length: 60 }, (_, i) => <option key={i} value={i}>{i}</option>)}
+            </select>
+            <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>m</span>
+            {/* Seconds */}
+            <select
+              value={entry.s}
+              onChange={e => updateRaceEntry(idx, 's', parseInt(e.target.value))}
+              style={{ width: 70, border: 'none', borderRadius: 8, background: 'var(--medium-bg)', color: 'var(--text-light)', fontSize: 18, textAlign: 'center', height: 48, fontWeight: 500, outline: 'none', boxShadow: '0 1px 4px 0 rgba(0,0,0,0.06)', padding: '0 8px' }}
+            >
+              {Array.from({ length: 60 }, (_, i) => <option key={i} value={i}>{i}</option>)}
+            </select>
+            <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>s</span>
+            {/* Remove Button */}
+            {raceEntries.length > 1 && (
+              <button type="button" onClick={() => removeRaceEntry(idx)} style={{ marginLeft: 10, background: 'none', border: 'none', color: '#fc5200', fontWeight: 700, fontSize: 18, cursor: 'pointer', borderRadius: 6, padding: '6px 12px', transition: 'background 0.2s' }}>Remove</button>
+            )}
+          </div>
+        ))}
+        {/* Add Button (Strava style) */}
+        <button
+          type="button"
+          onClick={addRaceEntry}
+          style={{
+            background: '#fc5200',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 24,
+            fontWeight: 800,
+            fontSize: 20,
+            padding: '12px 36px',
+            margin: '18px auto 0',
+            display: 'block',
+            boxShadow: '0 2px 12px 0 rgba(252,82,0,0.15)',
+            cursor: 'pointer',
+            letterSpacing: 1,
+            transition: 'background 0.2s, color 0.2s',
+          }}
+        >+ Add Another</button>
       </form>
-      {raceEntries.length > 0 && (
-        <div style={{ marginTop: 15 }}>
-          <h4 style={{ color: 'var(--neon-cyan)', fontSize: 15 }}>Your Recent Times:</h4>
-          <ul style={{ listStyle: 'none', padding: 0 }}>
-            {raceEntries.map((entry, idx) => (
-              <li key={idx} style={{ marginBottom: 4, color: 'var(--text-light)' }}>
-                <span style={{ fontWeight: 500 }}>{entry.distance}:</span> {entry.h}h {entry.m}m {entry.s}s
-                <button type="button" onClick={() => removeRaceEntry(idx)} style={{ marginLeft: 10, color: 'var(--error)', background: 'none', border: 'none', cursor: 'pointer' }}>Remove</button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 
@@ -646,30 +525,15 @@ const Predictor = () => {
         Race Time Predictor
       </h1>
 
-      {renderRaceEntryInput()}
-      <button onClick={calculateTimes} className="btn" style={{ width: 200, margin: '0 auto 20px', display: 'block' }}>
+      {renderRaceEntryRows()}
+      <button onClick={calculateTimes} className="btn" style={{ width: 220, margin: '0 auto 20px', display: 'block', background: '#fc5200', color: '#fff', borderRadius: 24, fontWeight: 800, fontSize: 20, padding: '12px 36px', boxShadow: '0 2px 12px 0 rgba(252,82,0,0.15)', letterSpacing: 1, border: 'none', cursor: 'pointer' }}>
         Calculate
       </button>
 
       {showResults && (
         <div className="card">
-          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-            <label style={{ color: 'var(--neon-cyan)', marginRight: '10px' }}>
-              Units:
-            </label>
-            <select
-              value={isImperial ? 'imperial' : 'metric'}
-              onChange={(e) => setIsImperial(e.target.value === 'imperial')}
-              style={{ width: '150px' }}
-            >
-              <option value="metric">Metric (km)</option>
-              <option value="imperial">Imperial (mi)</option>
-            </select>
-          </div>
-
           {renderResultsTable()}
           {renderSplitCard()}
-          {renderPaceBandCard()}
         </div>
       )}
     </div>
