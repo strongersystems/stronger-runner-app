@@ -124,7 +124,6 @@ const IntakeForm = () => {
     console.log('Form data:', formData);
 
     if (!user) {
-      setError('You must be logged in to submit this form');
       setLoading(false);
       return;
     }
