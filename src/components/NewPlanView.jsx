@@ -16,7 +16,7 @@ const NewPlanView = () => {
   useEffect(() => {
     fetchPlan();
     fetchAllWeeks();
-  }, [planId]);
+  }, [planId, fetchPlan, fetchAllWeeks]);
 
   useEffect(() => {
     if (generatingWeek && weeks.map(w => Number(w.week)).includes(generatingWeek)) {
@@ -95,7 +95,7 @@ const NewPlanView = () => {
                   setError(null);
                   try {
                     // 1. Insert a new pending chunk plan row for Week 1 if one doesn't exist
-                    const { data: existing, error: checkError } = await supabase
+                    const { data: existing } = await supabase
                       .from('training_plans')
                       .select('*')
                       .eq('intake_id', planId)
@@ -171,7 +171,7 @@ const NewPlanView = () => {
                       setError(null);
                       try {
                         // Insert a new pending chunk plan row for the missing week if one doesn't exist
-                        const { data: existing, error: checkError } = await supabase
+                        const { data: existing } = await supabase
                           .from('training_plans')
                           .select('*')
                           .eq('intake_id', planId)

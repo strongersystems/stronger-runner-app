@@ -4,21 +4,9 @@ const Predictor = () => {
   const [results, setResults] = useState({});
   const [showResults, setShowResults] = useState(false);
   const [isImperial, setIsImperial] = useState(false);
-  const [splitDistance, setSplitDistance] = useState(1);
-  const [splitUnit, setSplitUnit] = useState('km');
-  const [paceStrategy, setPaceStrategy] = useState('even');
-  const [targetTime, setTargetTime] = useState('');
-
-  // Add state for pace band splits
-  const [paceBandSplits, setPaceBandSplits] = useState(null);
-
-  // New state for flexible race entries
   const [raceEntries, setRaceEntries] = useState([
     { distance: '5K', h: 0, m: 0, s: 0 }
   ]); // Start with one blank row
-
-  // Add this state at the top of the component
-  const [selectedDistance, setSelectedDistance] = useState('5K');
 
   // Add state for split section race and units
   const [splitRace, setSplitRace] = useState('Marathon');
@@ -85,10 +73,6 @@ const Predictor = () => {
   };
 
 
-
-  // Use isImperial to determine units
-  const getDistanceUnit = () => (isImperial ? 'mi' : 'km');
-  const getDistanceValue = (km) => (isImperial ? (km / 1.60934) : km);
 
   // Update renderResultsTable for ±4% range and always show icons
   const renderResultsTable = () => {
@@ -386,10 +370,6 @@ const Predictor = () => {
     );
   };
 
-  const timeToSeconds = (timeObj) => {
-    return timeObj.h * 3600 + timeObj.m * 60 + timeObj.s;
-  };
-
   const secondsToTime = (seconds) => {
     const hours = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -411,9 +391,6 @@ const Predictor = () => {
     'Half Marathon': 21.0975,
     'Marathon': 42.195
   };
-
-  // Helper to check if currentEntry is a valid time
-  const isValidTime = (entry) => entry.h > 0 || entry.m > 0 || entry.s > 0;
 
   // UI for entering/editing recent times as editable rows
   const renderRaceEntryRows = () => (

@@ -7,7 +7,6 @@ const IntakeForm = () => {
   const { planId } = useParams();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
-  const [error, setError] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Form state
@@ -117,7 +116,6 @@ const IntakeForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
     setSuccess('');
     setIsGenerating(true);
 
@@ -176,8 +174,6 @@ const IntakeForm = () => {
 
       console.log('Supabase response:', { data, error });
 
-      if (error) throw error;
-
       // Compose the prompt for the background function
       const userData = { ...dbData, id: data[0].id };
       const daysPerWeek = userData.days_per_week || formData.daysPerWeek;
@@ -202,7 +198,6 @@ const IntakeForm = () => {
       // Always navigate to dashboard after submit
       navigate(`/new-plan/${data[0].id}`);
     } catch (error) {
-      setError(error.message);
       setLoading(false);
     }
   };
@@ -277,20 +272,6 @@ const IntakeForm = () => {
         }}>
           {planId ? 'Edit Training Plan' : 'Create Training Plan (Full Outline)'}
         </h1>
-
-        {error && (
-          <div style={{ 
-            background: 'rgba(220, 38, 38, 0.1)', 
-            color: 'var(--error)', 
-            padding: '12px', 
-            borderRadius: '8px', 
-            marginBottom: '20px',
-            border: '1px solid var(--error)',
-            fontSize: '14px'
-          }}>
-            {error}
-          </div>
-        )}
 
         {success && (
           <div style={{ 
