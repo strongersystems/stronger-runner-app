@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import supabase from '../supabaseClient';
 
@@ -13,7 +13,7 @@ const NewPlanView = () => {
   const [sessionModal, setSessionModal] = useState({ open: false, session: null });
 
   // Move fetchAllWeeks to the top-level of the component so it is defined and available everywhere it is used.
-  const fetchAllWeeks = async () => {
+  const fetchAllWeeks = useCallback(async () => {
     try {
       const { data: plans, error } = await supabase
         .from('training_plans')
@@ -41,7 +41,7 @@ const NewPlanView = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [planId]);
 
   useEffect(() => {
     const fetchPlanAndWeeks = async () => {
@@ -60,7 +60,7 @@ const NewPlanView = () => {
 
     fetchPlanAndWeeks();
     fetchAllWeeks();
-  }, [planId]);
+  }, [planId, fetchAllWeeks]);
 
   useEffect(() => {
     if (generatingWeek && weeks.map(w => Number(w.week)).includes(generatingWeek)) {
