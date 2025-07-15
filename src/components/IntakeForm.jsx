@@ -176,18 +176,6 @@ const IntakeForm = () => {
       // Compose the prompt for the background function
       const userData = { ...dbData, id: data[0].id };
       const daysPerWeek = userData.days_per_week || formData.daysPerWeek;
-      const daysPerWeekText = daysPerWeek === 7 
-        ? `*** CRITICAL: The runner wants to run 7 days per week. You MUST create a plan that includes running every single day of the week with NO rest days. This is non-negotiable. ***`
-        : `Preferred days per week to run: ${daysPerWeek}`;
-      const currentVolume = userData.weekly_mileage ? `Current (recent) weekly mileage: ${userData.weekly_mileage} ${userData.unit_preference === 'metric' ? 'km' : 'miles'}.` : '';
-      const startingVolume = userData.starting_volume ? `Starting weekly volume: ${userData.starting_volume} ${userData.unit_preference === 'metric' ? 'km' : 'miles'}.` : '';
-      let maxVolume = '';
-      if (formData.aiChooseMaxVolume || userData.aiChooseMaxVolume) {
-        maxVolume = 'Let the AI choose the maximum weekly volume based on the runner profile.';
-      } else if (userData.max_volume) {
-        maxVolume = `Maximum weekly volume: ${userData.max_volume} ${userData.unit_preference === 'metric' ? 'km' : 'miles'}.`;
-      }
-      const otherRequests = userData.other_requests ? `CRITICAL USER REQUIREMENTS: ${userData.other_requests}` : '';
      
 
 
