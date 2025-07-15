@@ -83,16 +83,15 @@ const NewPlanView = () => {
         <div>Loading...</div>
       ) : (
         <>
-          {/* If no weeks, show Generate Plan Outline button */}
+          {/* If no weeks, show Create Week 1 button */}
           {weeks.length === 0 && (
             <div style={{ textAlign: 'center', color: '#aaa', padding: 40 }}>
               <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
               <h3>No weeks generated yet</h3>
-              <p>Your plan outline should appear here once it's generated. Check your dashboard for the plan status.</p>
+              <p>Click below to create your first week of training.</p>
               <button
                 onClick={async () => {
                   setGenerating(g => ({ ...g, outline: true }));
-                  // setError(null); // Original line commented out
                   try {
                     // 1. Insert a new pending chunk plan row for Week 1 if one doesn't exist
                     const { data: existing } = await supabase
@@ -124,10 +123,10 @@ const NewPlanView = () => {
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ trigger: 'manual', intake_id: planId, only_week_1: true, week_number: 1 })
                     });
-                    if (!response.ok) throw new Error('Failed to generate plan outline');
+                    if (!response.ok) throw new Error('Failed to create Week 1');
                     await fetchAllWeeks();
                   } catch (err) {
-                    // setError('Error generating plan outline.'); // Original line commented out
+                    // handle error if needed
                   } finally {
                     setGenerating(g => ({ ...g, outline: false }));
                   }
@@ -145,7 +144,7 @@ const NewPlanView = () => {
                   width: '100%'
                 }}
               >
-                {generating.outline ? 'Generating Plan Outline...' : 'Generate Plan Outline'}
+                {generating.outline ? 'Creating Week 1...' : 'Create Week 1'}
               </button>
             </div>
           )}
@@ -201,9 +200,19 @@ const NewPlanView = () => {
                           body: JSON.stringify({ trigger: 'manual', intake_id: planId, only_week_1: true, week_number: missingWeek })
                         });
                         if (!response.ok) throw new Error('Failed to generate week');
-                        await fetchAllWeeks();
+                        // Poll for the new week to appear, up to 30 seconds
+                        let found = false;
+                        for (let i = 0; i < 15; i++) {
+                          await new Promise(res => setTimeout(res, 2000));
+                          await fetchAllWeeks();
+                          const currentWeeks = weeks.map(w => Number(w.week));
+                          if (currentWeeks.includes(missingWeek)) {
+                            found = true;
+                            break;
+                          }
+                        }
+                        setGeneratingWeek(null);
                       } catch (err) {
-                        // setError('Error generating week ' + missingWeek); // Original line commented out
                         setGeneratingWeek(null);
                       }
                     }}
@@ -233,6 +242,10 @@ const NewPlanView = () => {
             {weeks.map((week, idx) => {
               const hasSessionDetails = week.days && week.days.every(day => day.session_details);
               const isExpanded = expandedWeek === week.week;
+              // Calculate weekly total as sum of daily volumes
+              const weekTotal = week.days && Array.isArray(week.days)
+                ? week.days.reduce((sum, d) => sum + (Number(d.volume) || 0), 0)
+                : (Number(week.total_volume) || 0);
               return (
                 <div key={week.week} style={{
                   background: isExpanded ? '#232733' : '#20232b',
@@ -258,8 +271,49 @@ const NewPlanView = () => {
                     onClick={() => setExpandedWeek(isExpanded ? null : week.week)}
                   >
                     <span>Week {week.week}</span>
-                    <span style={{ color: '#ffb347', fontWeight: 600, fontSize: 18 }}>Total: {week.total_volume} {unit}</span>
+                    <span style={{ color: '#ffb347', fontWeight: 600, fontSize: 18 }}>Total: {weekTotal} {unit}</span>
                     <span style={{ fontSize: 18, marginLeft: 12 }}>{isExpanded ? '▲' : '▼'}</span>
+                    {/* Delete Week Button */}
+                    <button
+                      style={{
+                        marginLeft: 16,
+                        background: 'none',
+                        color: '#ef4444',
+                        border: 'none',
+                        borderRadius: '50%',
+                        padding: 0,
+                        width: 28,
+                        height: 28,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 18,
+                        cursor: 'pointer',
+                        boxShadow: 'none',
+                        transition: 'background 0.2s',
+                      }}
+                      title={`Delete Week ${week.week}`}
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (!window.confirm(`Are you sure you want to delete Week ${week.week}? This cannot be undone.`)) return;
+                        setLoading(true);
+                        try {
+                          // Find and delete the chunk for this week
+                          await supabase
+                            .from('training_plans')
+                            .delete()
+                            .eq('intake_id', planId)
+                            .eq('week_range', `${week.week}-${week.week}`);
+                          await fetchAllWeeks();
+                        } catch (err) {
+                          // Optionally handle error
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                    >
+                      <span role="img" aria-label="Delete Week">🗑️</span>
+                    </button>
                   </div>
                   {isExpanded && (
                     <div style={{ padding: '18px 28px', background: '#232733' }}>

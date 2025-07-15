@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import supabase from '../supabaseClient';
 
 const Dashboard = () => {
@@ -14,6 +14,9 @@ const Dashboard = () => {
   const [savedPredictions, setSavedPredictions] = useState([]);
   const [showPredictionModal, setShowPredictionModal] = useState(false);
   const [selectedPrediction, setSelectedPrediction] = useState(null);
+  const [editMode, setEditMode] = useState(false);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const getUser = async () => {
@@ -120,6 +123,12 @@ const Dashboard = () => {
     }
   }, [user]);
 
+  const handleDeletePrediction = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this prediction? This action cannot be undone.')) return;
+    await supabase.from('predictions').delete().eq('id', id);
+    setSavedPredictions(preds => preds.filter(p => p.id !== id));
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -217,7 +226,7 @@ const Dashboard = () => {
             <div style={{ fontSize: '32px', fontWeight: '700', marginBottom: '8px' }}>
               {stats.totalMileage}
             </div>
-            <div style={{ fontSize: '14px', opacity: 0.9 }}>Total Mileage</div>
+            <div style={{ fontSize: '14px', opacity: 0.9 }}>Total Volume</div>
           </div>
           
           <div style={{
@@ -333,10 +342,21 @@ const Dashboard = () => {
                   </div>
                   <div>
                     <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '4px' }}>
-                      Mileage
+                      Volume
                     </div>
                     <div style={{ color: 'var(--text-light)', fontWeight: '600' }}>
-                      {plan.weekly_mileage} {plan.unit_preference === 'metric' ? 'km' : 'mi'}
+                      {/* Show weekly volume range if available, else fallback to intake values, else dash */}
+                      {plan.weekly_breakdown && plan.weekly_breakdown.length > 0
+                        ? (() => {
+                            const vols = plan.weekly_breakdown.map(w => Number(w.total_volume)).filter(Boolean);
+                            if (vols.length === 0) return '-';
+                            const min = Math.min(...vols);
+                            const max = Math.max(...vols);
+                            return min === max ? `${min} ${plan.unit_preference === 'imperial' ? 'mi' : 'km'}` : `${min} - ${max} ${plan.unit_preference === 'imperial' ? 'mi' : 'km'}`;
+                          })()
+                        : (plan.starting_volume && plan.max_volume
+                            ? `${plan.starting_volume} - ${plan.max_volume} ${plan.unit_preference === 'imperial' ? 'mi' : 'km'}`
+                            : '-')}
                     </div>
                   </div>
                   <div>
@@ -352,7 +372,7 @@ const Dashboard = () => {
                       Weight
                     </div>
                     <div style={{ color: 'var(--text-light)', fontWeight: '600' }}>
-                      {plan.weight} {plan.unit_preference === 'metric' ? 'kg' : 'lbs'}
+                      {plan.weight} kg
                     </div>
                   </div>
                 </div>
@@ -457,8 +477,7 @@ const Dashboard = () => {
               <div
                 key={pred.id}
                 className="card card-hover"
-                style={{ cursor: 'pointer', border: '2px solid var(--primary)', padding: 18, background: '#181c24' }}
-                onClick={() => { setSelectedPrediction(pred); setShowPredictionModal(true); }}
+                style={{ cursor: 'pointer', border: '2px solid var(--primary)', padding: 18, background: '#181c24', position: 'relative' }}
               >
                 <div style={{ fontWeight: 700, color: 'var(--neon-cyan)', fontSize: 18, marginBottom: 6 }}>
                   {new Date(pred.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
@@ -468,6 +487,30 @@ const Dashboard = () => {
                 </div>
                 <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>
                   {pred.prediction?.raceEntries?.map((e, i) => `${e.distance}: ${e.h}h ${e.m}m ${e.s}s`).join(', ')}
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                  <button
+                    className="btn-secondary"
+                    style={{ fontSize: 13, padding: '6px 16px', borderRadius: 6 }}
+                    onClick={() => { setSelectedPrediction(pred); setShowPredictionModal(true); }}
+                  >
+                    View
+                  </button>
+                  <button
+                    className="btn-secondary"
+                    style={{ fontSize: 13, padding: '6px 16px', borderRadius: 6 }}
+                    onClick={() => navigate(`/predictor/${pred.id}`)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="btn-secondary"
+                    style={{ fontSize: 13, padding: '6px 10px', borderRadius: 6, background: '#ef4444', color: '#fff', display: 'inline-flex', alignItems: 'center' }}
+                    title="Delete Prediction"
+                    onClick={() => handleDeletePrediction(pred.id)}
+                  >
+                    <span style={{ fontSize: 18 }}>🗑️</span>
+                  </button>
                 </div>
               </div>
             ))}
@@ -479,38 +522,48 @@ const Dashboard = () => {
       {showPredictionModal && selectedPrediction && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }} onClick={() => setShowPredictionModal(false)}>
+        }} onClick={() => { setShowPredictionModal(false); setEditMode(false); }}>
           <div style={{ background: '#23272f', borderRadius: 16, padding: 32, minWidth: 320, maxWidth: 420, color: 'var(--text-light)', position: 'relative' }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => setShowPredictionModal(false)} style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer' }}>×</button>
-            <h2 style={{ color: 'var(--neon-cyan)', marginBottom: 10 }}>Prediction Details</h2>
-            <div style={{ marginBottom: 10, color: '#ffe066', fontWeight: 700 }}>
-              {selectedPrediction.prediction?.splitRace} ({selectedPrediction.prediction?.splitIsImperial ? 'mi' : 'km'})
-            </div>
-            <div style={{ marginBottom: 10 }}>
-              <strong>Saved:</strong> {new Date(selectedPrediction.created_at).toLocaleString()}
-            </div>
-            <div style={{ marginBottom: 10 }}>
-              <strong>Inputs:</strong>
-              <ul style={{ margin: 0, paddingLeft: 18 }}>
-                {selectedPrediction.prediction?.raceEntries?.map((e, i) => (
-                  <li key={i}>{e.distance}: {e.h}h {e.m}m {e.s}s</li>
-                ))}
-              </ul>
-            </div>
-            <div style={{ marginBottom: 10 }}>
-              <strong>Predicted Times:</strong>
-              <ul style={{ margin: 0, paddingLeft: 18 }}>
-                {selectedPrediction.prediction?.results && Object.entries(selectedPrediction.prediction.results).map(([dist, res], i) => (
-                  <li key={i}>{dist}: {res.predicted ? secondsToTime(res.predicted) : '-'} (±4%: {res.predicted ? `${secondsToTime(res.predicted * 0.96)} - ${secondsToTime(res.predicted * 1.04)}` : '-'})</li>
-                ))}
-              </ul>
-            </div>
-            <div style={{ marginBottom: 10 }}>
-              <strong>Splits:</strong>
-              <div style={{ fontSize: 15, color: '#6ec1e4', marginTop: 6 }}>
-                Target Time: {selectedPrediction.prediction?.splitTargetTime}
-              </div>
-            </div>
+            <button onClick={() => { setShowPredictionModal(false); setEditMode(false); }} style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer' }}>×</button>
+            <h2 style={{ color: 'var(--neon-cyan)', marginBottom: 10 }}>{editMode ? 'Edit Prediction' : 'Prediction Details'}</h2>
+            {/* Editable fields if in edit mode */}
+            {editMode ? (
+              <EditPredictionForm prediction={selectedPrediction} onSave={handleUpdatePrediction} onCancel={() => setEditMode(false)} />
+            ) : (
+              <>
+                <div style={{ marginBottom: 10, color: '#ffe066', fontWeight: 700 }}>
+                  {selectedPrediction.prediction?.splitRace} ({selectedPrediction.prediction?.splitIsImperial ? 'mi' : 'km'})
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  <strong>Saved:</strong> {new Date(selectedPrediction.created_at).toLocaleString()}
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  <strong>Inputs:</strong>
+                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+                    {selectedPrediction.prediction?.raceEntries?.map((e, i) => (
+                      <li key={i}>{e.distance}: {e.h}h {e.m}m {e.s}s</li>
+                    ))}
+                  </ul>
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  <strong>Predicted Times:</strong>
+                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+                    {selectedPrediction.prediction?.results && Object.entries(selectedPrediction.prediction.results).map(([dist, res], i) => (
+                      <li key={i}>{dist}: {res.predicted ? secondsToTime(res.predicted) : '-'} (±4%: {res.predicted ? `${secondsToTime(res.predicted * 0.96)} - ${secondsToTime(res.predicted * 1.04)}` : '-'})</li>
+                    ))}
+                  </ul>
+                </div>
+                <div style={{ textAlign: 'center', marginTop: 18 }}>
+                  <button
+                    className="btn"
+                    style={{ fontSize: 16, padding: '8px 24px', borderRadius: 8, background: '#3b82f6', color: '#fff', fontWeight: 700, boxShadow: '0 2px 8px 0 rgba(59,130,246,0.15)', cursor: 'pointer' }}
+                    onClick={() => { setShowPredictionModal(false); navigate(`/predictor/${selectedPrediction.id}`); }}
+                  >
+                    View Splits
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -565,4 +618,43 @@ function secondsToTime(seconds) {
   const secs = Math.floor(seconds % 60);
   if (hours) return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   return `${mins}:${secs.toString().padStart(2, '0')}`;
+} 
+
+function EditPredictionForm({ prediction, onSave, onCancel }) {
+  const [form, setForm] = useState({ ...prediction.prediction });
+  const [saving, setSaving] = useState(false);
+  const handleChange = (field, value) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+  };
+  // For simplicity, only allow editing splitTargetTime and splitRace here
+  return (
+    <form onSubmit={async e => {
+      e.preventDefault();
+      setSaving(true);
+      await onSave(prediction.id, form);
+      setSaving(false);
+    }}>
+      <div style={{ marginBottom: 12 }}>
+        <label style={{ color: '#6ec1e4', fontWeight: 700 }}>Race Type:</label>
+        <select value={form.splitRace} onChange={e => handleChange('splitRace', e.target.value)} style={{ marginLeft: 8, padding: 6, borderRadius: 6 }}>
+          <option value="Marathon">Marathon</option>
+          <option value="Half Marathon">Half Marathon</option>
+        </select>
+      </div>
+      <div style={{ marginBottom: 12 }}>
+        <label style={{ color: '#6ec1e4', fontWeight: 700 }}>Target Time:</label>
+        <input type="text" value={form.splitTargetTime} onChange={e => handleChange('splitTargetTime', e.target.value)} style={{ marginLeft: 8, padding: 6, borderRadius: 6 }} />
+      </div>
+      <div style={{ display: 'flex', gap: 12, marginTop: 18 }}>
+        <button type="submit" className="btn" style={{ padding: '8px 24px', borderRadius: 6 }} disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
+        <button type="button" className="btn-secondary" style={{ padding: '8px 24px', borderRadius: 6 }} onClick={onCancel}>Cancel</button>
+      </div>
+    </form>
+  );
+}
+
+async function handleUpdatePrediction(id, updatedPrediction) {
+  await supabase.from('predictions').update({ prediction: updatedPrediction }).eq('id', id);
+  // Optionally, refresh predictions list here
+  window.location.reload();
 } 

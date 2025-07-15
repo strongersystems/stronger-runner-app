@@ -29,7 +29,17 @@ async function processPlan(plan) {
         .not('week_range', 'eq', plan.week_range);
     }
     // 2. Build the prompt from plan/intake data
-    const userPrompt = plan.prompt || plan.user_prompt || 'Create a running plan.';
+    let userPrompt = plan.prompt || plan.user_prompt || 'Create a running plan.';
+
+    // Add critical requirements if not already present
+    const planLength = plan.plan_length || '12 Weeks';
+    const startingVolume = plan.starting_volume || 'the user\'s current weekly volume';
+    const maxVolume = plan.max_volume || 'the user\'s maximum weekly volume';
+    const unitPref = plan.unit_preference === 'imperial' ? 'mi' : 'km';
+    let requirements = `\nCRITICAL USER REQUIREMENTS:\n- The plan must be ${planLength}.\n- The first week's total_volume must be no more than ${startingVolume} (${unitPref}), and should start at or below the user's current or a safe starting volume.\n- The final week's total_volume must be no more than ${maxVolume} (${unitPref}).\n- Weekly total_volume should increase gradually, with no more than a 10% increase per week, ramping up from the starting volume to the max volume over the full plan length.\n- For each week, total_volume must always equal the sum of the daily volumes.\n- Long runs must never exceed 3 hours or 20-24 miles (32-38 km) for non-elite runners, and should build up gradually. In early weeks, the long run should be a safe, reasonable percentage of the weekly total (e.g., 20-30%), and only allow longer for elite athletes with a clear rationale.\n- All volumes and paces must use the user's selected units: ${unitPref}.\n- The plan should be progressive, safe, and tailored to the user's experience and goals.\n- Take into account the user's training history, goals, and available time per week.`;
+    if (!userPrompt.includes('CRITICAL USER REQUIREMENTS')) {
+      userPrompt += requirements;
+    }
     
     // Extract user requests from the prompt if they exist
     const userRequestsMatch = userPrompt.match(/CRITICAL USER REQUIREMENTS: (.+?)(?:\n\n|$)/);
@@ -366,4 +376,4 @@ exports.handler = async function(event, context) {
     statusCode: 200,
     body: 'Background plan generation complete.'
   };
-}; 
+};

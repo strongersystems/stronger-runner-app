@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import supabase from '../supabaseClient';
+import { useParams, useNavigate } from 'react-router-dom';
 
 const Predictor = () => {
   const distances = useMemo(() => ({
@@ -24,6 +25,11 @@ const Predictor = () => {
 
   // Add state for saving prediction
   const [saveStatus, setSaveStatus] = useState('');
+
+  // Add state for editing prediction
+  const { predictionId } = useParams();
+  const [editingPredictionId, setEditingPredictionId] = useState(null);
+  const navigate = useNavigate();
 
   // Helper for updating a race entry inline
   const updateRaceEntry = (idx, field, value) => {
@@ -238,6 +244,24 @@ const Predictor = () => {
     }
   }, [splitRace, splitIsImperial, results, distances]);
 
+  // Load prediction if editing
+  useEffect(() => {
+    if (predictionId) {
+      (async () => {
+        const { data, error } = await supabase.from('predictions').select('*').eq('id', predictionId).single();
+        if (data && data.prediction) {
+          setRaceEntries(data.prediction.raceEntries || [{ distance: '5K', h: 0, m: 0, s: 0 }]);
+          setResults(data.prediction.results || {});
+          setShowResults(!!data.prediction.results);
+          setSplitRace(data.prediction.splitRace || 'Marathon');
+          setSplitIsImperial(!!data.prediction.splitIsImperial);
+          setSplitTargetTime(data.prediction.splitTargetTime || '');
+          setEditingPredictionId(data.id);
+        }
+      })();
+    }
+  }, [predictionId]);
+
   // Refined split times table: only show pace per km/mi and key chunks
   const renderSplitCard = () => {
     const predictedTime = results[splitRace]?.predicted;
@@ -400,10 +424,9 @@ const Predictor = () => {
       setSaveStatus('You must be logged in to save predictions.');
       return;
     }
-    // Save prediction
-    const { error } = await supabase.from('predictions').insert([
-      {
-        user_id: user.id,
+    if (editingPredictionId) {
+      // Update existing prediction
+      const { error } = await supabase.from('predictions').update({
         prediction: {
           raceEntries,
           results,
@@ -412,13 +435,40 @@ const Predictor = () => {
           splitTargetTime,
           savedAt: new Date().toISOString(),
         },
-      },
-    ]);
-    if (error) {
-      setSaveStatus('Error saving prediction.');
+      }).eq('id', editingPredictionId);
+      if (error) {
+        setSaveStatus('Error updating prediction.');
+      } else {
+        setSaveStatus('Prediction updated!');
+      }
     } else {
-      setSaveStatus('Prediction saved!');
+      // Save new prediction
+      const { error } = await supabase.from('predictions').insert([
+        {
+          user_id: user.id,
+          prediction: {
+            raceEntries,
+            results,
+            splitRace,
+            splitIsImperial,
+            splitTargetTime,
+            savedAt: new Date().toISOString(),
+          },
+        },
+      ]);
+      if (error) {
+        setSaveStatus('Error saving prediction.');
+      } else {
+        setSaveStatus('Prediction saved!');
+      }
     }
+  };
+
+  const handleDeletePrediction = async () => {
+    if (!editingPredictionId) return;
+    if (!window.confirm('Are you sure you want to delete this prediction? This action cannot be undone.')) return;
+    await supabase.from('predictions').delete().eq('id', editingPredictionId);
+    navigate('/dashboard');
   };
 
   // UI for entering/editing recent times as editable rows
@@ -550,9 +600,22 @@ const Predictor = () => {
             className="btn"
             style={{ fontSize: 18, padding: '12px 32px', borderRadius: 8, background: '#10b981', color: '#fff', fontWeight: 700, boxShadow: '0 2px 8px 0 rgba(16,185,129,0.15)', cursor: 'pointer', marginRight: 12 }}
           >
-            Save Prediction
+            {editingPredictionId ? 'Update Prediction' : 'Save Prediction'}
           </button>
-          {saveStatus && <span style={{ marginLeft: 16, color: saveStatus.includes('saved') ? '#10b981' : '#ef4444', fontWeight: 600 }}>{saveStatus}</span>}
+          {saveStatus && <span style={{ marginLeft: 16, color: saveStatus.includes('saved') || saveStatus.includes('updated') ? '#10b981' : '#ef4444', fontWeight: 600 }}>{saveStatus}</span>}
+        </div>
+      )}
+      {/* Add Delete button if editing */}
+      {editingPredictionId && (
+        <div style={{ textAlign: 'center', marginTop: 12 }}>
+          <button
+            onClick={handleDeletePrediction}
+            className="btn-secondary"
+            style={{ fontSize: 16, padding: '8px 24px', borderRadius: 8, background: '#ef4444', color: '#fff', fontWeight: 700, boxShadow: '0 2px 8px 0 rgba(239,68,68,0.15)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+            title="Delete Prediction"
+          >
+            <span style={{ fontSize: 20 }}>🗑️</span> Delete
+          </button>
         </div>
       )}
     </div>

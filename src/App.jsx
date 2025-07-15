@@ -173,6 +173,11 @@ const App = () => {
               <Predictor />
             </ProtectedRoute>
           } />
+          <Route path="/predictor/:predictionId" element={
+            <ProtectedRoute>
+              <Predictor />
+            </ProtectedRoute>
+          } />
           <Route path="/plan/:planId" element={
             <ProtectedRoute>
               <ViewPlan />
