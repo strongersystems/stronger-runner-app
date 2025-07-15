@@ -175,7 +175,6 @@ const IntakeForm = () => {
 
       // Compose the prompt for the background function
       const userData = { ...dbData, id: data[0].id };
-      const daysPerWeek = userData.days_per_week || formData.daysPerWeek;
      
 
 
