@@ -212,7 +212,6 @@ Example (RPE-based week):
 Do not use any other summary fields. Always use the 'summary' field for each week. Always use 'heart_rate_range' OR 'rpe_range' as an array of two numbers for every day, never both, and never as a string.`;
 
     // --- STATUS: Updating from OpenAPI ---
-    console.log(`Updating plan from OpenAPI for plan id: ${plan.id}`);
     await supabase.from('training_plans').update({
       status: 'updating',
       error_message: null
@@ -248,14 +247,12 @@ Do not use any other summary fields. Always use the 'summary' field for each wee
           status: 'error',
           error_message: 'OpenAI timed out.'
         }).eq('id', plan.id);
-        console.log(`Plan ${plan.id} update failed: OpenAI timed out.`);
         return;
       } else {
         await supabase.from('training_plans').update({
           status: 'error',
           error_message: err.message
         }).eq('id', plan.id);
-        console.log(`Plan ${plan.id} update failed: ${err.message}`);
         return;
       }
     }
@@ -281,7 +278,6 @@ Do not use any other summary fields. Always use the 'summary' field for each wee
         error_message: 'Invalid JSON from OpenAI',
         plan_json: planContent
       }).eq('id', plan.id);
-      console.log(`Plan ${plan.id} update failed: Invalid JSON from OpenAI.`);
       return;
     }
 
@@ -293,11 +289,7 @@ Do not use any other summary fields. Always use the 'summary' field for each wee
       error_message: null
       // Keep existing chunk_type if it's already set
     }).eq('id', plan.id);
-    console.log(`Plan ${plan.id} updated from OpenAPI and saved.`);
-
-    // Auto-chunking logic removed. No new chunks will be created automatically.
   } catch (err) {
-    console.error('Unexpected error for plan', plan.id, err);
     await supabase.from('training_plans').update({
       status: 'error',
       error_message: err.message
@@ -310,14 +302,12 @@ exports.schedule = "*/2 * * * *";
 
 exports.handler = async function(event, context) {
   // This function can run for up to 15 minutes
-  console.log('Background plan generation started');
   
   // Handle manual triggers (when called directly from frontend)
   if (event.httpMethod === 'POST') {
     try {
       const body = JSON.parse(event.body);
       if (body.trigger === 'manual') {
-        console.log('Manual trigger received for intake_id:', body.intake_id);
         // Process only the specific intake if provided
         if (body.intake_id) {
           const { data: pendingPlans, error: fetchError } = await supabase
@@ -326,7 +316,6 @@ exports.handler = async function(event, context) {
             .eq('intake_id', body.intake_id)
             .eq('status', 'pending');
           if (fetchError || !pendingPlans || pendingPlans.length === 0) {
-            console.log('No pending plan found for intake_id:', body.intake_id);
             return {
               statusCode: 200,
               body: JSON.stringify({ message: 'No pending plan found' })
@@ -365,7 +354,6 @@ exports.handler = async function(event, context) {
   }
 
   if (!pendingPlans.length) {
-    console.log('No pending plans found.');
     return { statusCode: 200, body: 'No pending plans.' };
   }
 

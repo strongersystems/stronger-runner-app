@@ -58,8 +58,8 @@ const ViewPlan = () => {
           });
           const latestChunkList = Object.values(latestChunks);
           // Debug: log all latest chunk plans and their statuses
-          console.log('Latest chunk plans:', latestChunkList.map(p => ({week_range: p.week_range, status: p.status, id: p.id})));
-          console.log('All chunk plans found:', aiPlanData.map(p => ({week_range: p.week_range, status: p.status, chunk_type: p.chunk_type, id: p.id})));
+          // console.log('Latest chunk plans:', latestChunkList.map(p => ({week_range: p.week_range, status: p.status, id: p.id})));
+          // console.log('All chunk plans found:', aiPlanData.map(p => ({week_range: p.week_range, status: p.status, chunk_type: p.chunk_type, id: p.id})));
           // Instead of grouping by week_range, just collect all valid weeks from all latest chunks
           let allWeeks = [];
           let parseErrors = [];
@@ -83,10 +83,10 @@ const ViewPlan = () => {
                   }
                 });
               } else {
-                console.warn('Chunk has no weekly_breakdown array:', chunk.week_range, chunkData);
+                // console.warn('Chunk has no weekly_breakdown array:', chunk.week_range, chunkData);
               }
             } catch (error) {
-              console.error('Error parsing chunk plan:', error);
+              // console.error('Error parsing chunk plan:', error);
               parseErrors.push({ week_range: chunk.week_range, error: error.message });
             }
           });
@@ -105,8 +105,8 @@ const ViewPlan = () => {
           });
           const uniqueWeeks = Array.from(weekMap.values());
           uniqueWeeks.sort((a, b) => a.week - b.week);
-          console.log('Parsed weeks:', uniqueWeeks.map(w => ({week: w.week, summary: w.summary?.substring(0, 50), _chunkId: w._chunkId, _chunkStatus: w._chunkStatus})));
-          console.log('Total weeks found:', uniqueWeeks.length);
+          // console.log('Parsed weeks:', uniqueWeeks.map(w => ({week: w.week, summary: w.summary?.substring(0, 50), _chunkId: w._chunkId, _chunkStatus: w._chunkStatus})));
+          // console.log('Total weeks found:', uniqueWeeks.length);
           if (uniqueWeeks.length > 0) {
             setAiPlan({
               ...latestChunkList[0],
@@ -114,7 +114,7 @@ const ViewPlan = () => {
               plan_parse_error: parseErrors.length > 0 ? `Some chunks had parsing errors: ${parseErrors.map(e => e.week_range).join(', ')}` : null
             });
           } else {
-            console.error('No weeks could be parsed from any chunks');
+            // console.error('No weeks could be parsed from any chunks');
             setAiPlan({
               ...latestChunkList[0],
               plan_parse_error: 'No weeks could be parsed from chunk plans',
@@ -126,7 +126,7 @@ const ViewPlan = () => {
           setAiPlan(null);
         }
       } catch (error) {
-        console.error('Error fetching plan:', error);
+        // console.error('Error fetching plan:', error);
       } finally {
         setLoading(false);
       }
@@ -180,7 +180,7 @@ const ViewPlan = () => {
         .single();
 
       if (insertError) {
-        console.error('Error creating full plan:', insertError);
+        // console.error('Error creating full plan:', insertError);
         alert('Failed to re-submit plan.');
         setRegenerating(false);
         return;
@@ -229,7 +229,7 @@ const ViewPlan = () => {
       if (!response.ok) throw new Error('Failed to regenerate plan outline');
       setTimeout(() => window.location.reload(), 2000); // Reload after a short delay
     } catch (err) {
-      console.error('Error regenerating plan outline:', err);
+      // console.error('Error regenerating plan outline:', err);
     } finally {
       setRegenerating(false);
     }
@@ -403,7 +403,7 @@ const ViewPlan = () => {
       const prompt = buildPromptForWeeks(startWeek, endWeek, priorWeeksSummary);
       
       // Debug: log before insert
-      console.log(`Inserting new plan chunk for weeks ${startWeek}-${endWeek} with intake_id:`, planId);
+      // console.log(`Inserting new plan chunk for weeks ${startWeek}-${endWeek} with intake_id:`, planId);
       // Create a new plan entry for this chunk
       const { error: insertError } = await supabase
         .from('training_plans')
@@ -420,10 +420,10 @@ const ViewPlan = () => {
         .single();
 
       // Debug: log after insert
-      console.log('Insert result:', { insertError });
+      // console.log('Insert result:', { insertError });
 
       if (insertError) {
-        console.error('Error creating chunk plan:', insertError);
+        // console.error('Error creating chunk plan:', insertError);
         alert(`Failed to create plan chunk for weeks ${startWeek}-${endWeek}: ${insertError.message}`);
         setGenerating(prev => ({ ...prev, [rangeKey]: false }));
         generatingRef.current[rangeKey] = false;
@@ -445,9 +445,9 @@ const ViewPlan = () => {
             intake_id: planId
           })
         });
-        console.log('Background function triggered for weeks', startWeek, '-', endWeek);
+        // console.log('Background function triggered for weeks', startWeek, '-', endWeek);
       } catch {
-        console.log('Background function trigger failed (will run on schedule)');
+        // console.log('Background function trigger failed (will run on schedule)');
       }
 
     } catch (err) {
@@ -455,7 +455,7 @@ const ViewPlan = () => {
       generatingRef.current[rangeKey] = false;
       setRegenerating(false); // Ensure regenerating is false on error
       alert('Failed to generate weeks.');
-      console.error('generateWeeks error:', err);
+      // console.error('generateWeeks error:', err);
     }
   };
 

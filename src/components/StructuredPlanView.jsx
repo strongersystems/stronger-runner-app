@@ -144,8 +144,7 @@ const StructuredPlanView = ({ aiPlan }) => {
     return luminance > 160 ? '#222' : '#fff';
   };
 
-  // TEMP: Debug log for weeks array
-  console.log('StructuredPlanView weeks:', weeks);
+  // Removed all console.log statements from this file for production cleanliness.
 
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto', padding: 24 }}>
@@ -270,7 +269,6 @@ const StructuredPlanView = ({ aiPlan }) => {
                           transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                         }}
                         onClick={() => {
-                          console.log('Clicked day:', day);
                           setSelectedSession(day);
                         }}
                         onMouseOver={(e) => {

@@ -119,10 +119,6 @@ const IntakeForm = () => {
     setSuccess('');
     setIsGenerating(true);
 
-    console.log('Form submission started');
-    console.log('User:', user);
-    console.log('Form data:', formData);
-
     if (!user) {
       setLoading(false);
       return;
@@ -151,8 +147,6 @@ const IntakeForm = () => {
         ai_choose_max_volume: formData.aiChooseMaxVolume,
       };
 
-      console.log('Saving to Supabase with data:', dbData);
-      
       let data;
       if (planId) {
         // Update existing plan
@@ -170,13 +164,6 @@ const IntakeForm = () => {
           .insert([dbData])
           .select());
       }
-
-      console.log('Supabase response:', { data });
-
-      // Compose the prompt for the background function
-      const userData = { ...dbData, id: data[0].id };
-     
-
 
       setSuccess(planId ? 'Plan updated!' : 'Plan outline created! You can now generate detailed sessions for each week.');
       setLoading(false);

@@ -216,12 +216,8 @@ Do not use any other summary fields. Always use the 'summary' field for each wee
       };
     }
 
-    // Test OpenAI API key
-    console.log('OpenAI API Key exists:', !!process.env.OPENAI_API_KEY);
-    console.log('OpenAI API Key length:', process.env.OPENAI_API_KEY?.length || 0);
+    // Removed all console.log statements from this file for production cleanliness.
 
-    console.log('Calling OpenAI API...');
-    
     // Set up a timeout Promise (60 seconds)
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error("timeout")), 60000)
@@ -247,7 +243,7 @@ Do not use any other summary fields. Always use the 'summary' field for each wee
         }),
         timeoutPromise
       ]);
-      console.log('OpenAI API call completed');
+      // Removed all console.log statements from this file for production cleanliness.
 
       let planContent = completion.choices[0].message.content;
 
@@ -277,7 +273,7 @@ Do not use any other summary fields. Always use the 'summary' field for each wee
         };
       }
 
-      console.log('Returning response...');
+      // Removed all console.log statements from this file for production cleanliness.
       return {
         statusCode: 200,
         headers,
@@ -296,7 +292,7 @@ Do not use any other summary fields. Always use the 'summary' field for each wee
           body: JSON.stringify({ error: "Sorry, generating your plan took too long. Please try again or reduce the plan length." })
         };
       }
-      console.error('Error generating plan:', error);
+      // Removed all console.log statements from this file for production cleanliness.
       
       return {
         statusCode: 500,
@@ -309,7 +305,7 @@ Do not use any other summary fields. Always use the 'summary' field for each wee
     }
 
   } catch (error) {
-    console.error('Error generating plan:', error);
+    // Removed all console.log statements from this file for production cleanliness.
     
     return {
       statusCode: 500,
