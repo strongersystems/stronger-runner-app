@@ -11,6 +11,9 @@ const Dashboard = () => {
     totalMileage: 0,
     averageWeeklyTime: 0
   });
+  const [savedPredictions, setSavedPredictions] = useState([]);
+  const [showPredictionModal, setShowPredictionModal] = useState(false);
+  const [selectedPrediction, setSelectedPrediction] = useState(null);
 
   useEffect(() => {
     const getUser = async () => {
@@ -21,6 +24,23 @@ const Dashboard = () => {
       }
     };
     getUser();
+  }, []);
+
+  // Fetch predictions for the user
+  useEffect(() => {
+    const fetchPredictions = async (userId) => {
+      const { data, error } = await supabase
+        .from('predictions')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      if (!error && data) setSavedPredictions(data);
+    };
+    const getUserAndPredictions = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) fetchPredictions(user.id);
+    };
+    getUserAndPredictions();
   }, []);
 
   const fetchSavedPlans = async (userId) => {
@@ -416,6 +436,85 @@ const Dashboard = () => {
         )}
       </div>
 
+      {/* Add below the Training Plans section */}
+      <div className="card fade-in" style={{ marginTop: 32 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <h2 style={{ color: 'var(--text-light)', fontSize: '24px', fontWeight: '600' }}>
+            Saved Race Predictions
+          </h2>
+        </div>
+        {savedPredictions.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>⏱️</div>
+            <h3 style={{ fontSize: '18px', marginBottom: '8px', color: 'var(--text-light)' }}>
+              No predictions saved yet
+            </h3>
+            <p>Use the Race Predictor to save your first prediction.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '18px' }}>
+            {savedPredictions.map(pred => (
+              <div
+                key={pred.id}
+                className="card card-hover"
+                style={{ cursor: 'pointer', border: '2px solid var(--primary)', padding: 18, background: '#181c24' }}
+                onClick={() => { setSelectedPrediction(pred); setShowPredictionModal(true); }}
+              >
+                <div style={{ fontWeight: 700, color: 'var(--neon-cyan)', fontSize: 18, marginBottom: 6 }}>
+                  {new Date(pred.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                </div>
+                <div style={{ color: 'var(--text-light)', fontSize: 15 }}>
+                  {pred.prediction?.splitRace || 'Race'} ({pred.prediction?.splitIsImperial ? 'mi' : 'km'})
+                </div>
+                <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>
+                  {pred.prediction?.raceEntries?.map((e, i) => `${e.distance}: ${e.h}h ${e.m}m ${e.s}s`).join(', ')}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Prediction Modal/Lightbox */}
+      {showPredictionModal && selectedPrediction && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }} onClick={() => setShowPredictionModal(false)}>
+          <div style={{ background: '#23272f', borderRadius: 16, padding: 32, minWidth: 320, maxWidth: 420, color: 'var(--text-light)', position: 'relative' }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowPredictionModal(false)} style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer' }}>×</button>
+            <h2 style={{ color: 'var(--neon-cyan)', marginBottom: 10 }}>Prediction Details</h2>
+            <div style={{ marginBottom: 10, color: '#ffe066', fontWeight: 700 }}>
+              {selectedPrediction.prediction?.splitRace} ({selectedPrediction.prediction?.splitIsImperial ? 'mi' : 'km'})
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <strong>Saved:</strong> {new Date(selectedPrediction.created_at).toLocaleString()}
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <strong>Inputs:</strong>
+              <ul style={{ margin: 0, paddingLeft: 18 }}>
+                {selectedPrediction.prediction?.raceEntries?.map((e, i) => (
+                  <li key={i}>{e.distance}: {e.h}h {e.m}m {e.s}s</li>
+                ))}
+              </ul>
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <strong>Predicted Times:</strong>
+              <ul style={{ margin: 0, paddingLeft: 18 }}>
+                {selectedPrediction.prediction?.results && Object.entries(selectedPrediction.prediction.results).map(([dist, res], i) => (
+                  <li key={i}>{dist}: {res.predicted ? secondsToTime(res.predicted) : '-'} (±4%: {res.predicted ? `${secondsToTime(res.predicted * 0.96)} - ${secondsToTime(res.predicted * 1.04)}` : '-'})</li>
+                ))}
+              </ul>
+            </div>
+            <div style={{ marginBottom: 10 }}>
+              <strong>Splits:</strong>
+              <div style={{ fontSize: 15, color: '#6ec1e4', marginTop: 6 }}>
+                Target Time: {selectedPrediction.prediction?.splitTargetTime}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Quick Actions */}
       <div className="card fade-in">
         <h2 style={{ 
@@ -457,3 +556,13 @@ const Dashboard = () => {
 };
 
 export default Dashboard; 
+
+// Helper to format seconds as HH:MM:SS
+function secondsToTime(seconds) {
+  if (!seconds && seconds !== 0) return '-';
+  const hours = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  if (hours) return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+} 

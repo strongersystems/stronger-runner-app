@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import supabase from '../supabaseClient';
 
 const Predictor = () => {
   const distances = useMemo(() => ({
@@ -20,6 +21,9 @@ const Predictor = () => {
 
   // Add state for custom target time in split section
   const [splitTargetTime, setSplitTargetTime] = useState('');
+
+  // Add state for saving prediction
+  const [saveStatus, setSaveStatus] = useState('');
 
   // Helper for updating a race entry inline
   const updateRaceEntry = (idx, field, value) => {
@@ -388,6 +392,35 @@ const Predictor = () => {
 
   const fatigueFactor = 1.06;
 
+  const handleSavePrediction = async () => {
+    setSaveStatus('');
+    // Get user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setSaveStatus('You must be logged in to save predictions.');
+      return;
+    }
+    // Save prediction
+    const { error } = await supabase.from('predictions').insert([
+      {
+        user_id: user.id,
+        prediction: {
+          raceEntries,
+          results,
+          splitRace,
+          splitIsImperial,
+          splitTargetTime,
+          savedAt: new Date().toISOString(),
+        },
+      },
+    ]);
+    if (error) {
+      setSaveStatus('Error saving prediction.');
+    } else {
+      setSaveStatus('Prediction saved!');
+    }
+  };
+
   // UI for entering/editing recent times as editable rows
   const renderRaceEntryRows = () => (
     <div className="card" style={{ marginBottom: 20, color: 'var(--text-light)' }}>
@@ -507,6 +540,19 @@ const Predictor = () => {
         <div className="card">
           {renderResultsTable()}
           {renderSplitCard()}
+        </div>
+      )}
+      {/* Add Save Prediction button below results table */}
+      {showResults && (
+        <div style={{ textAlign: 'center', marginTop: 24 }}>
+          <button
+            onClick={handleSavePrediction}
+            className="btn"
+            style={{ fontSize: 18, padding: '12px 32px', borderRadius: 8, background: '#10b981', color: '#fff', fontWeight: 700, boxShadow: '0 2px 8px 0 rgba(16,185,129,0.15)', cursor: 'pointer', marginRight: 12 }}
+          >
+            Save Prediction
+          </button>
+          {saveStatus && <span style={{ marginLeft: 16, color: saveStatus.includes('saved') ? '#10b981' : '#ef4444', fontWeight: 600 }}>{saveStatus}</span>}
         </div>
       )}
     </div>
