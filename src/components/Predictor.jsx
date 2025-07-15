@@ -1,6 +1,13 @@
 import React, { useState, useMemo } from 'react';
 
 const Predictor = () => {
+  const distances = useMemo(() => ({
+    '1 Mile': 1.60934,
+    '5K': 5,
+    '10K': 10,
+    'Half Marathon': 21.0975,
+    'Marathon': 42.195
+  }), []);
   const [results, setResults] = useState({});
   const [showResults, setShowResults] = useState(false);
   const [raceEntries, setRaceEntries] = useState([
@@ -380,14 +387,6 @@ const Predictor = () => {
   };
 
   const fatigueFactor = 1.06;
-
-  const distances = useMemo(() => ({
-    '1 Mile': 1.60934,
-    '5K': 5,
-    '10K': 10,
-    'Half Marathon': 21.0975,
-    'Marathon': 42.195
-  }), []);
 
   // UI for entering/editing recent times as editable rows
   const renderRaceEntryRows = () => (
