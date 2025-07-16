@@ -201,13 +201,11 @@ const NewPlanView = () => {
                         });
                         if (!response.ok) throw new Error('Failed to generate week');
                         // Poll for the new week to appear, up to 30 seconds
-                        let found = false;
                         for (let i = 0; i < 15; i++) {
                           await new Promise(res => setTimeout(res, 2000));
                           await fetchAllWeeks();
                           const currentWeeks = weeks.map(w => Number(w.week));
                           if (currentWeeks.includes(missingWeek)) {
-                            found = true;
                             break;
                           }
                         }

@@ -426,7 +426,7 @@ const Predictor = () => {
     }
     if (editingPredictionId) {
       // Update existing prediction
-      const { error } = await supabase.from('predictions').update({
+      await supabase.from('predictions').update({
         prediction: {
           raceEntries,
           results,
@@ -436,14 +436,10 @@ const Predictor = () => {
           savedAt: new Date().toISOString(),
         },
       }).eq('id', editingPredictionId);
-      if (error) {
-        setSaveStatus('Error updating prediction.');
-      } else {
-        setSaveStatus('Prediction updated!');
-      }
+      setSaveStatus('Prediction updated!');
     } else {
       // Save new prediction
-      const { error } = await supabase.from('predictions').insert([
+      await supabase.from('predictions').insert([
         {
           user_id: user.id,
           prediction: {
@@ -456,11 +452,7 @@ const Predictor = () => {
           },
         },
       ]);
-      if (error) {
-        setSaveStatus('Error saving prediction.');
-      } else {
-        setSaveStatus('Prediction saved!');
-      }
+      setSaveStatus('Prediction saved!');
     }
   };
 
