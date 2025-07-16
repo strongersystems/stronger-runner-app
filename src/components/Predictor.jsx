@@ -248,7 +248,7 @@ const Predictor = () => {
   useEffect(() => {
     if (predictionId) {
       (async () => {
-        const { data, error } = await supabase.from('predictions').select('*').eq('id', predictionId).single();
+        const { data } = await supabase.from('predictions').select('*').eq('id', predictionId).single();
         if (data && data.prediction) {
           setRaceEntries(data.prediction.raceEntries || [{ distance: '5K', h: 0, m: 0, s: 0 }]);
           setResults(data.prediction.results || {});
