@@ -9,6 +9,7 @@ import Predictor from './components/Predictor';
 import ViewPlan from './components/ViewPlan';
 import NewPlanView from './components/NewPlanView';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminDashboard from './components/AdminDashboard';
 
 const Navigation = () => {
   const [user, setUser] = useState(null);
@@ -91,6 +92,20 @@ const Navigation = () => {
           }}>
             Predictor
           </Link>
+          {(user?.user_metadata?.role === 'admin' || user?.raw_user_meta_data?.role === 'admin') && (
+            <Link to="/admin" style={{
+              color: '#ffe066',
+              textDecoration: 'none',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              transition: 'all 0.2s',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              background: 'rgba(252,82,0,0.15)'
+            }}>
+              Admin
+            </Link>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <span style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
@@ -186,6 +201,11 @@ const App = () => {
           <Route path="/new-plan/:planId" element={
             <ProtectedRoute>
               <NewPlanView />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin" element={
+            <ProtectedRoute>
+              <AdminDashboard />
             </ProtectedRoute>
           } />
           <Route path="/" element={<Navigate to={user ? "/dashboard" : "/login"} replace />} />
