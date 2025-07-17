@@ -607,27 +607,28 @@ const Predictor = () => {
       </h1>
 
       {renderRaceEntryRows()}
-      <button onClick={calculateTimes} className="btn" style={{ width: 220, margin: '0 auto 20px', display: 'block', background: '#fc5200', color: '#fff', borderRadius: 24, fontWeight: 800, fontSize: 20, padding: '12px 36px', boxShadow: '0 2px 12px 0 rgba(252,82,0,0.15)', letterSpacing: 1, border: 'none', cursor: 'pointer' }}>
-        Calculate
-      </button>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 20 }}>
+        <button onClick={calculateTimes} className="btn" style={{ width: 180, background: '#fc5200', color: '#fff', borderRadius: 24, fontWeight: 800, fontSize: 20, padding: '12px 36px', boxShadow: '0 2px 12px 0 rgba(252,82,0,0.15)', letterSpacing: 1, border: 'none', cursor: 'pointer' }}>
+          Calculate
+        </button>
+        {showResults && (
+          <button
+            onClick={handleSavePrediction}
+            className="btn"
+            style={{ width: 180, background: '#10b981', color: '#fff', borderRadius: 24, fontWeight: 800, fontSize: 20, padding: '12px 36px', boxShadow: '0 2px 12px 0 rgba(16,185,129,0.15)', letterSpacing: 1, border: 'none', cursor: 'pointer' }}
+          >
+            Save
+          </button>
+        )}
+        {showResults && saveStatus && (
+          <span style={{ alignSelf: 'center', marginLeft: 8, color: saveStatus.includes('saved') || saveStatus.includes('updated') ? '#10b981' : '#ef4444', fontWeight: 600 }}>{saveStatus}</span>
+        )}
+      </div>
 
       {showResults && (
         <div className="card">
           {renderResultsTable()}
           {renderSplitCard()}
-        </div>
-      )}
-      {/* Add Save Prediction button below results table */}
-      {showResults && (
-        <div style={{ textAlign: 'center', marginTop: 24 }}>
-          <button
-            onClick={handleSavePrediction}
-            className="btn"
-            style={{ fontSize: 18, padding: '12px 32px', borderRadius: 8, background: '#10b981', color: '#fff', fontWeight: 700, boxShadow: '0 2px 8px 0 rgba(16,185,129,0.15)', cursor: 'pointer', marginRight: 12 }}
-          >
-            {editingPredictionId ? 'Update Prediction' : 'Save Prediction'}
-          </button>
-          {saveStatus && <span style={{ marginLeft: 16, color: saveStatus.includes('saved') || saveStatus.includes('updated') ? '#10b981' : '#ef4444', fontWeight: 600 }}>{saveStatus}</span>}
         </div>
       )}
       {/* Add Delete button if editing */}

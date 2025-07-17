@@ -209,7 +209,7 @@ const Dashboard = () => {
                   <button
                     className="btn-secondary"
                     style={{ fontSize: 13, padding: '6px 16px', borderRadius: 6 }}
-                    onClick={() => { setSelectedPrediction(pred); setShowPredictionModal(true); }}
+                    onClick={() => navigate(`/predictor/${pred.id}`)}
                   >
                     View/Edit
                   </button>
