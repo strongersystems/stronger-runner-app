@@ -32,6 +32,7 @@ const AdminDashboard = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalUser, setModalUser] = useState(null);
   const [modalPredictions, setModalPredictions] = useState([]);
+  const [selectedPrediction, setSelectedPrediction] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -61,6 +62,7 @@ const AdminDashboard = () => {
     setModalUser(user);
     setModalOpen(true);
     setModalPredictions([]);
+    setSelectedPrediction(null); // Reset selected prediction when opening modal
     const preds = await fetchPredictionsForUser(user.id);
     setModalPredictions(preds);
   };
@@ -69,6 +71,7 @@ const AdminDashboard = () => {
     setModalOpen(false);
     setModalUser(null);
     setModalPredictions([]);
+    setSelectedPrediction(null);
   };
 
   if (loading) return <div style={{ color: '#fc5200', textAlign: 'center', marginTop: 40 }}>Loading admin dashboard...</div>;
@@ -163,7 +166,9 @@ const AdminDashboard = () => {
                   </thead>
                   <tbody>
                     {modalPredictions.map(pred => (
-                      <tr key={pred.id} style={{ borderBottom: '1px solid #333' }}>
+                      <tr key={pred.id} style={{ borderBottom: '1px solid #333', cursor: 'pointer', background: selectedPrediction && selectedPrediction.id === pred.id ? '#333' : 'inherit' }}
+                        onClick={() => setSelectedPrediction(pred)}
+                      >
                         <td style={{ padding: 10 }}>{pred.prediction?.raceEntries?.[0]?.distance || '-'}</td>
                         <td style={{ padding: 10 }}>{pred.created_at ? new Date(pred.created_at).toLocaleDateString() : '-'}</td>
                         <td style={{ padding: 10, wordBreak: 'break-all' }}>{pred.prediction?.results ? Object.values(pred.prediction.results).map((r, i) => <span key={i}>{r.time}{i < Object.values(pred.prediction.results).length - 1 ? ', ' : ''}</span>) : '-'}</td>
@@ -171,6 +176,15 @@ const AdminDashboard = () => {
                     ))}
                   </tbody>
                 </table>
+                {/* Show selected prediction details */}
+                {selectedPrediction && (
+                  <div style={{ marginTop: 24, background: '#181c24', borderRadius: 8, padding: 16, color: '#ffe066', fontSize: 14 }}>
+                    <h3 style={{ color: '#fc5200', marginBottom: 10, fontSize: 17 }}>Prediction Details</h3>
+                    <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: '#fff', background: 'none', fontSize: 13, margin: 0 }}>
+                      {JSON.stringify(selectedPrediction.prediction, null, 2)}
+                    </pre>
+                  </div>
+                )}
               </div>
             )}
           </div>
