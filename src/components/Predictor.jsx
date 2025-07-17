@@ -34,7 +34,6 @@ const Predictor = () => {
 
   // Add state for info modal
   const [infoModal, setInfoModal] = useState({ open: false, distance: null });
-  const [perfInfo, setPerfInfo] = useState({ open: false, text: '', anchor: null });
 
   // Add state for isMobile
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 700);
