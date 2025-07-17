@@ -63,7 +63,7 @@ const Predictor = () => {
   };
 
   // Calculate times using all valid raceEntries
-  const calculateTimes = () => {
+  const calculateTimes = async () => {
     // Build inputs object for each distance
     const inputs = {};
     raceEntries.forEach(entry => {
@@ -100,6 +100,29 @@ const Predictor = () => {
     });
     setResults(newResults);
     setShowResults(true);
+    // Auto-save if not editing an existing prediction
+    if (!editingPredictionId) {
+      // Get user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('predictions').insert([
+          {
+            user_id: user.id,
+            prediction: {
+              raceEntries,
+              results: newResults,
+              splitRace,
+              splitIsImperial,
+              splitTargetTime,
+              savedAt: new Date().toISOString(),
+            },
+          },
+        ]);
+        setSaveStatus('Prediction saved!');
+      } else {
+        setSaveStatus('You must be logged in to save predictions.');
+      }
+    }
   };
 
 
@@ -600,7 +623,7 @@ const Predictor = () => {
         <button onClick={calculateTimes} className="btn" style={{ width: 180, background: '#fc5200', color: '#fff', borderRadius: 24, fontWeight: 800, fontSize: 20, padding: '12px 36px', boxShadow: '0 2px 12px 0 rgba(252,82,0,0.15)', letterSpacing: 1, border: 'none', cursor: 'pointer' }}>
           Calculate
         </button>
-        {showResults && (
+        {showResults && editingPredictionId && (
           <button
             onClick={handleSavePrediction}
             className="btn"
