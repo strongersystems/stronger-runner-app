@@ -31,6 +31,11 @@ const Signup = () => {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: process.env.NODE_ENV === 'production'
+            ? 'https://running.stronger.systems'
+            : 'http://localhost:8888',
+        },
       });
 
       if (error) throw error;

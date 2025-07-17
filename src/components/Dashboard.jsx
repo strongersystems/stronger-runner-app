@@ -171,87 +171,90 @@ const Dashboard = () => {
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-      {/* Header */}
-      <div className="card fade-in" style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <div>
-            <h1 style={{ 
-              color: 'var(--text-light)', 
-              fontSize: '28px',
-              fontWeight: '700',
-              marginBottom: '8px'
-            }}>
-              Welcome back, {user?.email?.split('@')[0]}! 👋
-            </h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '16px' }}>
-              Ready to crush your next race? Let's see your training progress.
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <Link to="/intake" className="btn">
-              + New Plan
-            </Link>
-            <Link to="/predictor" className="btn btn-secondary">
-              Race Predictor
-            </Link>
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-          gap: '20px' 
-        }}>
-          <div style={{
-            background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)',
-            padding: '20px',
-            borderRadius: '12px',
-            color: 'white',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '32px', fontWeight: '700', marginBottom: '8px' }}>
-              {stats.totalPlans}
-            </div>
-            <div style={{ fontSize: '14px', opacity: 0.9 }}>Training Plans</div>
-          </div>
-          
-          <div style={{
-            background: 'linear-gradient(135deg, var(--accent) 0%, var(--success) 100%)',
-            padding: '20px',
-            borderRadius: '12px',
-            color: 'white',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '32px', fontWeight: '700', marginBottom: '8px' }}>
-              {stats.totalMileage}
-            </div>
-            <div style={{ fontSize: '14px', opacity: 0.9 }}>Total Volume</div>
-          </div>
-          
-          <div style={{
-            background: 'linear-gradient(135deg, var(--secondary) 0%, #8b5cf6 100%)',
-            padding: '20px',
-            borderRadius: '12px',
-            color: 'white',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '32px', fontWeight: '700', marginBottom: '8px' }}>
-              {stats.averageWeeklyTime}h
-            </div>
-            <div style={{ fontSize: '14px', opacity: 0.9 }}>Avg Weekly Time</div>
-          </div>
-        </div>
+      {/* Race Predictor Card - moved to top */}
+      <div className="card fade-in" style={{ marginBottom: '32px', background: 'linear-gradient(135deg, var(--secondary) 0%, #8b5cf6 100%)', color: 'white', textAlign: 'center', padding: '32px 20px' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: 12 }}>Race Predictor</h1>
+        <p style={{ fontSize: '1.1rem', marginBottom: 18 }}>Predict your race times and generate pace bands for your next event.</p>
+        <Link to="/predictor" className="btn btn-secondary" style={{ fontSize: 18, padding: '12px 32px', borderRadius: 8, fontWeight: 700 }}>Go to Race Predictor</Link>
       </div>
 
-      {/* Saved Plans */}
+      {/* Optionally keep a minimal stats summary below */}
+      {/*
+      <div className="card fade-in" style={{ marginBottom: '32px', background: 'rgba(255,255,255,0.02)' }}>
+        <div style={{ display: 'flex', gap: '20px', justifyContent: 'center' }}>
+          <div style={{ color: 'var(--primary)', fontWeight: 700, fontSize: 22 }}>Plans: {stats.totalPlans}</div>
+          <div style={{ color: 'var(--success)', fontWeight: 700, fontSize: 22 }}>Volume: {stats.totalMileage}</div>
+          <div style={{ color: '#8b5cf6', fontWeight: 700, fontSize: 22 }}>Avg Weekly: {stats.averageWeeklyTime}h</div>
+        </div>
+      </div>
+      */}
+
+      {/* Saved Race Predictions - moved to top */}
+      <div className="card fade-in" style={{ marginBottom: 32 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <h2 style={{ color: 'var(--text-light)', fontSize: '24px', fontWeight: '600' }}>
+            Saved Race Predictions
+          </h2>
+        </div>
+        {savedPredictions.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>⏱️</div>
+            <h3 style={{ fontSize: '18px', marginBottom: '8px', color: 'var(--text-light)' }}>
+              No predictions saved yet
+            </h3>
+            <p>Use the Race Predictor to save your first prediction.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '18px' }}>
+            {savedPredictions.map(pred => (
+              <div
+                key={pred.id}
+                className="card card-hover"
+                style={{ cursor: 'pointer', border: '2px solid var(--primary)', padding: 18, background: '#181c24', position: 'relative' }}
+              >
+                <div style={{ fontWeight: 700, color: 'var(--neon-cyan)', fontSize: 18, marginBottom: 6 }}>
+                  {new Date(pred.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                </div>
+                <div style={{ color: 'var(--text-light)', fontSize: 15 }}>
+                  {pred.prediction?.splitRace || 'Race'} ({pred.prediction?.splitIsImperial ? 'mi' : 'km'})
+                </div>
+                <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>
+                  {pred.prediction?.raceEntries?.map((e, i) => `${e.distance}: ${e.h}h ${e.m}m ${e.s}s`).join(', ')}
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                  <button
+                    className="btn-secondary"
+                    style={{ fontSize: 13, padding: '6px 16px', borderRadius: 6 }}
+                    onClick={() => { setSelectedPrediction(pred); setShowPredictionModal(true); }}
+                  >
+                    View
+                  </button>
+                  <button
+                    className="btn-secondary"
+                    style={{ fontSize: 13, padding: '6px 16px', borderRadius: 6 }}
+                    onClick={() => navigate(`/predictor/${pred.id}`)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="btn-secondary"
+                    style={{ fontSize: 13, padding: '6px 10px', borderRadius: 6, background: '#ef4444', color: '#fff', display: 'inline-flex', alignItems: 'center' }}
+                    title="Delete Prediction"
+                    onClick={() => handleDeletePrediction(pred.id)}
+                  >
+                    <span style={{ fontSize: 18 }}>🗑️</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Your Training Plans - now below predictions */}
       <div className="card fade-in">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h2 style={{ 
-            color: 'var(--text-light)', 
-            fontSize: '24px',
-            fontWeight: '600'
-          }}>
+          <h2 style={{ color: 'var(--text-light)', fontSize: '24px', fontWeight: '600' }}>
             Your Training Plans
           </h2>
           <Link to="/intake" className="btn">
@@ -448,68 +451,6 @@ const Dashboard = () => {
                     title="Delete Plan"
                   >
                     🗑️
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Add below the Training Plans section */}
-      <div className="card fade-in" style={{ marginTop: 32 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <h2 style={{ color: 'var(--text-light)', fontSize: '24px', fontWeight: '600' }}>
-            Saved Race Predictions
-          </h2>
-        </div>
-        {savedPredictions.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: '40px', marginBottom: '12px' }}>⏱️</div>
-            <h3 style={{ fontSize: '18px', marginBottom: '8px', color: 'var(--text-light)' }}>
-              No predictions saved yet
-            </h3>
-            <p>Use the Race Predictor to save your first prediction.</p>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '18px' }}>
-            {savedPredictions.map(pred => (
-              <div
-                key={pred.id}
-                className="card card-hover"
-                style={{ cursor: 'pointer', border: '2px solid var(--primary)', padding: 18, background: '#181c24', position: 'relative' }}
-              >
-                <div style={{ fontWeight: 700, color: 'var(--neon-cyan)', fontSize: 18, marginBottom: 6 }}>
-                  {new Date(pred.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                </div>
-                <div style={{ color: 'var(--text-light)', fontSize: 15 }}>
-                  {pred.prediction?.splitRace || 'Race'} ({pred.prediction?.splitIsImperial ? 'mi' : 'km'})
-                </div>
-                <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>
-                  {pred.prediction?.raceEntries?.map((e, i) => `${e.distance}: ${e.h}h ${e.m}m ${e.s}s`).join(', ')}
-                </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                  <button
-                    className="btn-secondary"
-                    style={{ fontSize: 13, padding: '6px 16px', borderRadius: 6 }}
-                    onClick={() => { setSelectedPrediction(pred); setShowPredictionModal(true); }}
-                  >
-                    View
-                  </button>
-                  <button
-                    className="btn-secondary"
-                    style={{ fontSize: 13, padding: '6px 16px', borderRadius: 6 }}
-                    onClick={() => navigate(`/predictor/${pred.id}`)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="btn-secondary"
-                    style={{ fontSize: 13, padding: '6px 10px', borderRadius: 6, background: '#ef4444', color: '#fff', display: 'inline-flex', alignItems: 'center' }}
-                    title="Delete Prediction"
-                    onClick={() => handleDeletePrediction(pred.id)}
-                  >
-                    <span style={{ fontSize: 18 }}>🗑️</span>
                   </button>
                 </div>
               </div>

@@ -1,6 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import supabase from '../supabaseClient';
 import { useParams, useNavigate } from 'react-router-dom';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceArea } from 'recharts';
+import { ScatterChart, Scatter, ErrorBar } from 'recharts';
+import { FaInfoCircle } from 'react-icons/fa';
 
 const Predictor = () => {
   const distances = useMemo(() => ({
@@ -30,6 +33,9 @@ const Predictor = () => {
   const { predictionId } = useParams();
   const [editingPredictionId, setEditingPredictionId] = useState(null);
   const navigate = useNavigate();
+
+  // Add state for info modal
+  const [infoModal, setInfoModal] = useState({ open: false, distance: null });
 
   // Helper for updating a race entry inline
   const updateRaceEntry = (idx, field, value) => {
@@ -145,7 +151,7 @@ const Predictor = () => {
               fontSize: 16,
               borderBottom: '2px solid #333',
             }}>
-              Predicted Time
+              Predicted Time <FaInfoCircle style={{ cursor: 'pointer', color: '#10b981' }} title="How is this calculated?" onClick={() => setInfoModal({ open: true, distance: 'Predicted' })} />
             </th>
             <th style={{
               padding: '12px',
@@ -202,17 +208,34 @@ const Predictor = () => {
               );
             }
             return (
-              <tr key={dist} style={{
-                background: index % 2 === 0 ? '#23272f' : '#181c24',
-                color: '#f8f8f8',
-                fontSize: 16,
-              }}>
-                <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700 }}>{distanceLabels[dist]}</td>
-                <td style={{ padding: '12px', textAlign: 'center', color: '#ffe066', fontWeight: 700 }}>{result.actual ? secondsToTime(result.actual) : '-'}</td>
-                <td style={{ padding: '12px', textAlign: 'center', color: '#6ec1e4', fontWeight: 700 }}>{result.predicted ? secondsToTime(result.predicted) : '-'}</td>
-                <td style={{ padding: '12px', textAlign: 'center', color: '#b388ff', fontWeight: 700 }}>{result.predicted ? `${secondsToTime(result.predicted * 0.96)} - ${secondsToTime(result.predicted * 1.04)}` : '-'}</td>
-                <td style={{ padding: '12px', textAlign: 'center' }}>{perf}</td>
-              </tr>
+              <React.Fragment key={dist}>
+                <tr style={{
+                  background: index % 2 === 0 ? '#23272f' : '#181c24',
+                  color: '#f8f8f8',
+                  fontSize: 16,
+                }}>
+                  <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700 }}>{distanceLabels[dist]}</td>
+                  <td style={{ padding: '12px', textAlign: 'center', color: '#ffe066', fontWeight: 700 }}>{result.actual ? secondsToTime(result.actual) : '-'}</td>
+                  <td style={{ padding: '12px', textAlign: 'center', color: '#6ec1e4', fontWeight: 700 }}>
+                    {result.predicted ? (
+                      <>
+                        {secondsToTime(result.predicted)}
+                        <FaInfoCircle style={{ cursor: 'pointer', color: '#10b981', marginLeft: 6 }} title="How is this calculated?" onClick={() => setInfoModal({ open: true, distance: dist })} />
+                      </>
+                    ) : '-'}
+                  </td>
+                  <td style={{ padding: '12px', textAlign: 'center', color: '#b388ff', fontWeight: 700 }}>{result.predicted ? `${secondsToTime(result.predicted * 0.96)} - ${secondsToTime(result.predicted * 1.04)}` : '-'}</td>
+                  <td style={{ padding: '12px', textAlign: 'center' }}>{perf}</td>
+                </tr>
+                {/* Show warning row only after Marathon if Mile is entered */}
+                {hasMile && dist === 'Marathon' && (
+                  <tr>
+                    <td colSpan={5} style={{ background: '#fff3cd', color: '#fc5200', fontWeight: 800, fontSize: 14, textAlign: 'center', borderTop: '1px solid #fc5200', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }}>
+                      ⚠️ 1 Mile time may skew Half Marathon and Marathon predictions
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             );
           })}
         </tbody>
@@ -416,6 +439,35 @@ const Predictor = () => {
 
   const fatigueFactor = 1.06;
 
+  // Helper to prepare data for the chart
+  const getChartData = () => {
+    const standardDistances = ['1 Mile', '5K', '10K', 'Half Marathon', 'Marathon'];
+    return standardDistances.map(dist => {
+      const res = results[dist] || {};
+      return {
+        name: dist,
+        Actual: res.actual ? Math.round(res.actual) : null,
+        Predicted: res.predicted ? Math.round(res.predicted) : null,
+        Lower: res.lower ? Math.round(res.lower) : null,
+        Upper: res.upper ? Math.round(res.upper) : null,
+      };
+    });
+  };
+
+  // Helper to prepare scatter data for the chart
+  const getScatterData = () => {
+    const standardDistances = ['1 Mile', '5K', '10K', 'Half Marathon', 'Marathon'];
+    return standardDistances.map(dist => {
+      const res = results[dist] || {};
+      return {
+        name: dist,
+        Predicted: res.predicted ? Math.round(res.predicted) : null,
+        Actual: res.actual ? Math.round(res.actual) : null,
+        Error: res.predicted ? [Math.round(res.predicted * 0.04), Math.round(res.predicted * 0.04)] : [0, 0],
+      };
+    });
+  };
+
   const handleSavePrediction = async () => {
     setSaveStatus('');
     // Get user
@@ -562,6 +614,9 @@ const Predictor = () => {
     </div>
   );
 
+  // Check if 1 Mile is entered
+  const hasMile = raceEntries.some(e => e.distance === '1 Mile' && (e.h > 0 || e.m > 0 || e.s > 0));
+
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
       <h1 style={{ 
@@ -608,6 +663,82 @@ const Predictor = () => {
           >
             <span style={{ fontSize: 20 }}>🗑️</span> Delete
           </button>
+        </div>
+      )}
+      {/* Explanation and warning section */}
+      <div className="card" style={{ margin: '32px auto 0', maxWidth: 700, background: 'rgba(255,255,255,0.03)', color: 'var(--text-light)', padding: 24, borderRadius: 16 }}>
+        <h2 style={{ color: '#10b981', marginBottom: 10 }}>How Race Predictions Work</h2>
+        <p style={{ fontSize: 16, marginBottom: 10 }}>
+          This tool uses your recent race times to estimate your performance at other distances. It applies a mathematical model (Riegel formula, fatigue factor 1.06) to predict how your pace changes as distance increases. The "Predicted Time" is the model's best guess, and the shaded range shows ±3% margin for typical day-to-day variation.
+        </p>
+        <ul style={{ fontSize: 15, marginBottom: 10 }}>
+          <li><b>Actual Time</b>: Your real result (if entered for that distance).</li>
+          <li><b>Predicted Time</b>: What the model expects you could run, based on your other results.</li>
+          <li><b>Range</b>: A typical range for your predicted time, accounting for good/bad days.</li>
+        </ul>
+        <h3 style={{ color: '#fc5200', marginTop: 18 }}>⚠️ 1 Mile times can skew long distance predictions</h3>
+        <p style={{ fontSize: 15, color: '#ffe066' }}>
+          Using a 1 Mile time to predict a Half Marathon or Marathon is not very reliable. The model tends to overestimate your endurance at longer distances. For best results, use 1 Mile times only for 5K/10K predictions, and use 5K/10K/Half times for longer races.
+        </p>
+      </div>
+      {/* Info Modal/Lightbox for prediction explanation */}
+      {infoModal.open && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setInfoModal({ open: false, distance: null })}>
+          <div style={{ background: '#23272f', borderRadius: 16, padding: 32, minWidth: 320, maxWidth: 420, color: 'var(--text-light)', position: 'relative' }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setInfoModal({ open: false, distance: null })} style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer' }}>×</button>
+            <h2 style={{ color: '#10b981', marginBottom: 10 }}>How is {infoModal.distance} Predicted?</h2>
+            <p style={{ fontSize: 15, marginBottom: 10 }}>
+              The prediction for <b>{infoModal.distance}</b> is calculated using the Riegel formula:
+            </p>
+            <pre style={{ background: '#181c24', color: '#ffe066', padding: 10, borderRadius: 8, fontSize: 15, marginBottom: 10 }}>
+              T₂ = T₁ × (D₂ / D₁)<sup>1.06</sup>
+            </pre>
+            <p style={{ fontSize: 15, marginBottom: 10 }}>
+              Where:
+              <ul>
+                <li><b>T₁</b> = Your time for a known distance (in seconds)</li>
+                <li><b>D₁</b> = That known distance (in km)</li>
+                <li><b>D₂</b> = The target distance (in km)</li>
+                <li><b>T₂</b> = Predicted time for the target distance</li>
+              </ul>
+            </p>
+            {/* Show breakdown for this prediction */}
+            {(() => {
+              const dist = infoModal.distance;
+              if (!dist || !results[dist] || !results[dist].predicted) return null;
+              // Find all user entries used for this prediction
+              const usedEntries = raceEntries.filter(e => e.distance !== dist && (e.h > 0 || e.m > 0 || e.s > 0));
+              if (usedEntries.length === 0) return <p style={{ color: '#ffe066' }}>No other race times entered to predict this distance.</p>;
+              return (
+                <div style={{ marginTop: 10 }}>
+                  <b>Calculation(s) used:</b>
+                  <ul style={{ fontSize: 15 }}>
+                    {usedEntries.map((e, i) => {
+                      const knownTime = e.h * 3600 + e.m * 60 + e.s;
+                      const knownDist = distances[e.distance];
+                      const targetDist = distances[dist];
+                      const predicted = knownTime * Math.pow(targetDist / knownDist, 1.06);
+                      return (
+                        <li key={i}>
+                          From your {e.distance} time: {secondsToTime(knownTime)} →
+                          {` ${secondsToTime(Math.round(predicted))} for ${dist} `}
+                          <span style={{ color: '#b388ff' }}>
+                            (T₂ = {knownTime}s × ({targetDist} / {knownDist})<sup>1.06</sup> = {Math.round(predicted)}s)
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <div style={{ fontSize: 15, marginTop: 8 }}>
+                    <b>Average prediction:</b> {secondsToTime(Math.round(results[dist].predicted))}
+                  </div>
+                </div>
+              );
+            })()}
+            <p style={{ fontSize: 15, marginTop: 10 }}>
+              The app averages predictions from all your entered times (except for the distance being predicted). The ±4% range shows typical day-to-day variation.
+            </p>
+          </div>
         </div>
       )}
     </div>
