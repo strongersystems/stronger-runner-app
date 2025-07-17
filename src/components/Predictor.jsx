@@ -34,6 +34,15 @@ const Predictor = () => {
 
   // Add state for info modal
   const [infoModal, setInfoModal] = useState({ open: false, distance: null });
+  const [perfInfo, setPerfInfo] = useState({ open: false, text: '', anchor: null });
+
+  // Add state for isMobile
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 700);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 700);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Helper for updating a race entry inline
   const updateRaceEntry = (idx, field, value) => {
@@ -105,139 +114,102 @@ const Predictor = () => {
       'Half Marathon': 'Half Marathon',
       'Marathon': 'Marathon',
     };
-    return (
-      <table style={{
-        width: '100%',
-        borderCollapse: 'collapse',
-        marginTop: '20px',
-        animation: 'fadeIn 1s ease-in',
-        color: '#f8f8f8',
-        background: 'var(--dark-bg)',
-        borderRadius: 12,
-        overflow: 'hidden',
-      }}>
-        <thead>
-          <tr>
-            <th style={{
-              padding: '12px',
-              textAlign: 'center',
-              background: '#23272f',
-              color: '#fff',
-              fontWeight: 800,
-              fontSize: 16,
-              borderBottom: '2px solid #333',
-            }}>
-              Distance
-            </th>
-            <th style={{
-              padding: '12px',
-              textAlign: 'center',
-              background: '#23272f',
-              color: '#fff',
-              fontWeight: 800,
-              fontSize: 16,
-              borderBottom: '2px solid #333',
-            }}>
-              Actual Time
-            </th>
-            <th style={{
-              padding: '12px',
-              textAlign: 'center',
-              background: '#23272f',
-              color: '#fff',
-              fontWeight: 800,
-              fontSize: 16,
-              borderBottom: '2px solid #333',
-            }}>
-              Predicted Time <FaInfoCircle style={{ cursor: 'pointer', color: '#10b981' }} title="How is this calculated?" onClick={() => setInfoModal({ open: true, distance: 'Predicted' })} />
-            </th>
-            <th style={{
-              padding: '12px',
-              textAlign: 'center',
-              background: '#23272f',
-              color: '#fff',
-              fontWeight: 800,
-              fontSize: 16,
-              borderBottom: '2px solid #333',
-            }}>
-              Range (±4%)
-            </th>
-            <th style={{
-              padding: '12px',
-              textAlign: 'center',
-              background: '#23272f',
-              color: '#fff',
-              fontWeight: 800,
-              fontSize: 16,
-              borderBottom: '2px solid #333',
-            }}>
-              Performance
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {standardDistances.map((dist, index) => {
-            const result = results[dist] || {};
-            let perf = null;
-            if (result.actual && result.predicted) {
-              const diff = (result.actual - result.predicted) / result.predicted;
-              let color = '', text = '', icon = '';
-              if (diff < -0.08) {
-                color = '#00ff6a'; text = 'Way Faster than Predicted'; icon = '🚀';
-              } else if (diff < -0.05) {
-                color = '#1ed760'; text = 'Faster than Predicted'; icon = '↑';
-              } else if (diff < -0.04) {
-                color = '#00bfae'; text = 'Within Range, Outperforming'; icon = '↗';
-              } else if (diff < 0) {
-                color = '#ffe066'; text = 'Within Range, Slightly Faster'; icon = '↗';
-              } else if (diff < 0.04) {
-                color = '#ffe066'; text = 'Within Range, Slightly Slower'; icon = '↘';
-              } else if (diff < 0.05) {
-                color = '#ffb347'; text = 'Within Range, Slightly Slower'; icon = '↘';
-              } else if (diff < 0.08) {
-                color = '#e4572e'; text = 'Slower than Predicted'; icon = '↓';
-              } else {
-                color = '#b30000'; text = 'Much Slower than Predicted'; icon = '🛑';
-              }
-              perf = (
-                <span title={text} style={{ background: color, color: '#222', borderRadius: 16, padding: '4px 14px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 15 }}>
-                  <span style={{ fontSize: 18 }}>{icon}</span> {text}
-                </span>
-              );
-            }
-            return (
-              <React.Fragment key={dist}>
-                <tr style={{
-                  background: index % 2 === 0 ? '#23272f' : '#181c24',
-                  color: '#f8f8f8',
-                  fontSize: 16,
-                }}>
-                  <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700 }}>{distanceLabels[dist]}</td>
-                  <td style={{ padding: '12px', textAlign: 'center', color: '#ffe066', fontWeight: 700 }}>{result.actual ? secondsToTime(result.actual) : '-'}</td>
-                  <td style={{ padding: '12px', textAlign: 'center', color: '#6ec1e4', fontWeight: 700 }}>
-                    {result.predicted ? (
-                      <>
-                        {secondsToTime(result.predicted)}
-                        <FaInfoCircle style={{ cursor: 'pointer', color: '#10b981', marginLeft: 6 }} title="How is this calculated?" onClick={() => setInfoModal({ open: true, distance: dist })} />
-                      </>
-                    ) : '-'}
-                  </td>
-                  <td style={{ padding: '12px', textAlign: 'center', color: '#b388ff', fontWeight: 700 }}>{result.predicted ? `${secondsToTime(result.predicted * 0.96)} - ${secondsToTime(result.predicted * 1.04)}` : '-'}</td>
-                  <td style={{ padding: '12px', textAlign: 'center' }}>{perf}</td>
-                </tr>
-                {/* Show warning row only after Marathon if Mile is entered */}
-                {hasMile && dist === 'Marathon' && (
-                  <tr>
-                    <td colSpan={5} style={{ background: '#fff3cd', color: '#fc5200', fontWeight: 800, fontSize: 14, textAlign: 'center', borderTop: '1px solid #fc5200', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }}>
-                      ⚠️ 1 Mile time may skew Half Marathon and Marathon predictions
+    if (isMobile) {
+      // MOBILE: 3 columns, no performance
+      return (
+        <div style={{ width: '100%' }}>
+          <table className="results-table" style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', marginTop: '20px', color: '#f8f8f8', background: 'var(--dark-bg)', borderRadius: 12, overflow: 'hidden' }}>
+            <thead>
+              <tr>
+                <th style={{ width: '33%', padding: '12px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 16, borderBottom: '2px solid #333' }}>Distance</th>
+                <th style={{ width: '33%', padding: '12px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 16, borderBottom: '2px solid #333' }}>Actual Time</th>
+                <th style={{ width: '34%', padding: '12px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 16, borderBottom: '2px solid #333' }}>Predicted Time <FaInfoCircle style={{ cursor: 'pointer', color: '#10b981' }} title="How is this calculated?" onClick={() => setInfoModal({ open: true, distance: 'Predicted' })} /></th>
+              </tr>
+            </thead>
+            <tbody>
+              {standardDistances.map((dist, index) => {
+                const result = results[dist] || {};
+                return (
+                  <tr key={dist} style={{ background: index % 2 === 0 ? '#23272f' : '#181c24', color: '#f8f8f8', fontSize: 14 }}>
+                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 700 }}>{distanceLabels[dist]}</td>
+                    <td style={{ padding: '8px', textAlign: 'center', color: '#ffe066', fontWeight: 700 }}>{result.actual ? secondsToTime(result.actual) : '-'}</td>
+                    <td style={{ padding: '8px', textAlign: 'center', fontWeight: 700 }}>
+                      <div style={{ color: '#6ec1e4', fontWeight: 700, fontSize: 15 }}>{result.predicted ? secondsToTime(result.predicted) : '-'}</div>
+                      <div style={{ color: '#b388ff', fontWeight: 500, fontSize: 12, marginTop: 2 }}>
+                        {result.predicted ? `(${secondsToTime(result.predicted * 0.96)} - ${secondsToTime(result.predicted * 1.04)})` : ''}
+                      </div>
                     </td>
                   </tr>
-                )}
-              </React.Fragment>
-            );
-          })}
-        </tbody>
-      </table>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+    // DESKTOP: original 5-column table
+    return (
+      <div style={{ width: '100%' }}>
+        <table className="results-table" style={{ minWidth: 600, width: '100%', borderCollapse: 'collapse', marginTop: '20px', animation: 'fadeIn 1s ease-in', color: '#f8f8f8', background: 'var(--dark-bg)', borderRadius: 12, overflow: 'hidden' }}>
+          <thead>
+            <tr>
+              <th style={{ padding: '12px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 16, borderBottom: '2px solid #333' }}>Distance</th>
+              <th style={{ padding: '12px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 16, borderBottom: '2px solid #333' }}>Actual Time</th>
+              <th style={{ padding: '12px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 16, borderBottom: '2px solid #333' }}>Predicted Time <FaInfoCircle style={{ cursor: 'pointer', color: '#10b981' }} title="How is this calculated?" onClick={() => setInfoModal({ open: true, distance: 'Predicted' })} /></th>
+              <th style={{ padding: '12px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 16, borderBottom: '2px solid #333' }}>Range (±4%)</th>
+              <th style={{ padding: '12px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 16, borderBottom: '2px solid #333' }}>Performance</th>
+            </tr>
+          </thead>
+          <tbody>
+            {standardDistances.map((dist, index) => {
+              const result = results[dist] || {};
+              let perf = null, perfIcon = '', perfText = '', color = '#888';
+              if (result.actual && result.predicted) {
+                const diff = (result.actual - result.predicted) / result.predicted;
+                if (diff < -0.08) { perfIcon = '🚀'; perfText = 'Way Faster than Predicted'; color = '#00ff6a'; }
+                else if (diff < -0.05) { perfIcon = '↑'; perfText = 'Faster than Predicted'; color = '#1ed760'; }
+                else if (diff < -0.04) { perfIcon = '↗'; perfText = 'Within Range, Outperforming'; color = '#00bfae'; }
+                else if (diff < 0) { perfIcon = '↗'; perfText = 'Within Range, Slightly Faster'; color = '#ffe066'; }
+                else if (diff < 0.04) { perfIcon = '↘'; perfText = 'Within Range, Slightly Slower'; color = '#ffe066'; }
+                else if (diff < 0.05) { perfIcon = '↘'; perfText = 'Within Range, Slightly Slower'; color = '#ffb347'; }
+                else if (diff < 0.08) { perfIcon = '↓'; perfText = 'Slower than Predicted'; color = '#e4572e'; }
+                else { perfIcon = '🛑'; perfText = 'Much Slower than Predicted'; color = '#b30000'; }
+                perf = (
+                  <span title={perfText} style={{ background: color, color: '#222', borderRadius: 16, padding: '4px 14px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 15 }}>
+                    <span style={{ fontSize: 18 }}>{perfIcon}</span> {perfText}
+                  </span>
+                );
+              } // else leave perf as null (blank cell)
+              return (
+                <React.Fragment key={dist}>
+                  <tr style={{ background: index % 2 === 0 ? '#23272f' : '#181c24', color: '#f8f8f8', fontSize: 16 }}>
+                    <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700 }}>{distanceLabels[dist]}</td>
+                    <td style={{ padding: '12px', textAlign: 'center', color: '#ffe066', fontWeight: 700 }}>{result.actual ? secondsToTime(result.actual) : '-'}</td>
+                    <td style={{ padding: '12px', textAlign: 'center', color: '#6ec1e4', fontWeight: 700 }}>
+                      {result.predicted ? (
+                        <>
+                          {secondsToTime(result.predicted)}
+                          <FaInfoCircle style={{ cursor: 'pointer', color: '#10b981', marginLeft: 6 }} title="How is this calculated?" onClick={() => setInfoModal({ open: true, distance: dist })} />
+                        </>
+                      ) : '-'}
+                    </td>
+                    <td style={{ padding: '12px', textAlign: 'center', color: '#b388ff', fontWeight: 700 }}>{result.predicted ? `${secondsToTime(result.predicted * 0.96)} - ${secondsToTime(result.predicted * 1.04)}` : '-'}</td>
+                    <td style={{ padding: '12px', textAlign: 'center' }}>{perf}</td>
+                  </tr>
+                  {/* Show warning row only after Marathon if Mile is entered */}
+                  {hasMile && dist === 'Marathon' && (
+                    <tr>
+                      <td colSpan={5} style={{ background: '#fff3cd', color: '#fc5200', fontWeight: 800, fontSize: 14, textAlign: 'center', borderTop: '1px solid #fc5200', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }}>
+                        ⚠️ 1 Mile time may skew Half Marathon and Marathon predictions
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     );
   };
 
@@ -364,6 +336,7 @@ const Predictor = () => {
         maxWidth: 340,
         marginLeft: 'auto',
         marginRight: 'auto',
+        overflowX: 'auto',
       }}>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 18, marginBottom: 10 }}>
           <select value={splitRace} onChange={e => setSplitRace(e.target.value)} style={{ padding: '6px 12px', borderRadius: 8, fontWeight: 700, fontSize: 16, background: '#23272f', color: '#fff', border: 'none', outline: 'none' }}>
@@ -405,20 +378,22 @@ const Predictor = () => {
         }}>
           Split Times ({splitRace}, {splitIsImperial ? 'mi' : 'km'})
         </h2>
-        <table style={{ width: '100%', borderCollapse: 'collapse', margin: '0 auto', background: 'transparent', fontSize: 15 }}>
-          <tbody>
-            <tr>
-              <td style={{ textAlign: 'left', padding: '4px 0', fontWeight: 700, color: '#6ec1e4' }}>{paceLabel}</td>
-              <td style={{ textAlign: 'right', padding: '4px 0', fontWeight: 700, color: '#ffe066' }}>{paceValue}</td>
-            </tr>
-            {splits.map((split, idx) => (
-              <tr key={idx}>
-                <td style={{ textAlign: 'left', padding: '4px 0', fontWeight: 600 }}>{split.label}</td>
-                <td style={{ textAlign: 'right', padding: '4px 0', fontWeight: 700 }}>{getSplitTime(split.dist)}</td>
+        <div style={{ width: '100%', overflowX: 'auto' }}>
+          <table style={{ minWidth: 220, width: '100%', borderCollapse: 'collapse', margin: '0 auto', background: 'transparent', fontSize: 15 }}>
+            <tbody>
+              <tr>
+                <td style={{ textAlign: 'left', padding: '4px 0', fontWeight: 700, color: '#6ec1e4' }}>{paceLabel}</td>
+                <td style={{ textAlign: 'right', padding: '4px 0', fontWeight: 700, color: '#ffe066' }}>{paceValue}</td>
               </tr>
-            ))}
-          </tbody>
-        </table>
+              {splits.map((split, idx) => (
+                <tr key={idx}>
+                  <td style={{ textAlign: 'left', padding: '4px 0', fontWeight: 600 }}>{split.label}</td>
+                  <td style={{ textAlign: 'right', padding: '4px 0', fontWeight: 700 }}>{getSplitTime(split.dist)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   };
@@ -720,6 +695,36 @@ const Predictor = () => {
           </div>
         </div>
       )}
+      <style>{`
+        @media (max-width: 700px) {
+          .card {
+            padding: 8px !important;
+          }
+          table {
+            font-size: 13px !important;
+          }
+          th, td {
+            padding: 6px !important;
+          }
+          h1 {
+            font-size: 20px !important;
+          }
+          .results-table {
+            table-layout: fixed !important;
+          }
+          .results-table .hide-mobile {
+            display: none !important;
+          }
+        }
+        @media (max-width: 500px) {
+          .card {
+            padding: 2px !important;
+          }
+          h1 {
+            font-size: 16px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

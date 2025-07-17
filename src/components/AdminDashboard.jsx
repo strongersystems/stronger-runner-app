@@ -76,54 +76,56 @@ const AdminDashboard = () => {
   return (
     <div style={{ maxWidth: 1000, margin: '40px auto', background: '#23272f', color: '#fff', borderRadius: 12, padding: 24 }}>
       <h1 style={{ color: '#fc5200', marginBottom: 24 }}>Admin Dashboard</h1>
-      <table style={{ width: '100%', borderCollapse: 'collapse', background: '#181c24', borderRadius: 8, fontSize: 15 }}>
-        <thead>
-          <tr>
-            <th style={{ padding: 12, textAlign: 'left', color: '#ffe066' }}>Email</th>
-            <th style={{ padding: 12, textAlign: 'center', color: '#ffe066' }}>Role</th>
-            <th style={{ padding: 12, textAlign: 'center', color: '#ffe066' }}>Date Joined</th>
-            <th style={{ padding: 12, textAlign: 'center', color: '#ffe066' }}>Last Login</th>
-            <th style={{ padding: 12, textAlign: 'center', color: '#ffe066' }}>Predictions</th>
-            <th style={{ padding: 12, textAlign: 'center', color: '#ffe066' }}>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map(user => (
-            <tr key={user.id} style={{ borderBottom: '1px solid #333' }}>
-              <td style={{ padding: 12 }}>{user.email}</td>
-              <td style={{ padding: 12, textAlign: 'center' }}>
-                <span style={{
-                  color: user.role === 'admin' ? '#ffe066' : '#10b981',
-                  fontWeight: user.role === 'admin' ? 700 : 500,
-                  background: user.role === 'admin' ? 'rgba(252,82,0,0.15)' : 'rgba(16,185,129,0.15)',
-                  padding: '4px 10px',
-                  borderRadius: 8
-                }}>{user.role || 'user'}</span>
-              </td>
-              <td style={{ padding: 12, textAlign: 'center' }}>{user.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}</td>
-              <td style={{ padding: 12, textAlign: 'center' }}>{user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString() : '-'}</td>
-              <td style={{ padding: 12, textAlign: 'center' }}>{user.predictionCount}</td>
-              <td style={{ padding: 12, textAlign: 'center' }}>
-                <button
-                  onClick={() => openPredictionsModal(user)}
-                  style={{
-                    background: '#10b981',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 8,
-                    padding: '6px 18px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    fontSize: 14
-                  }}
-                >
-                  View Predictions
-                </button>
-              </td>
+      <div style={{ width: '100%', overflowX: 'auto' }}>
+        <table style={{ minWidth: 600, width: '100%', borderCollapse: 'collapse', background: '#181c24', borderRadius: 8, fontSize: 15 }}>
+          <thead>
+            <tr>
+              <th style={{ padding: 12, textAlign: 'left', color: '#ffe066' }}>Email</th>
+              <th style={{ padding: 12, textAlign: 'center', color: '#ffe066' }}>Role</th>
+              <th style={{ padding: 12, textAlign: 'center', color: '#ffe066' }}>Date Joined</th>
+              <th style={{ padding: 12, textAlign: 'center', color: '#ffe066' }}>Last Login</th>
+              <th style={{ padding: 12, textAlign: 'center', color: '#ffe066' }}>Predictions</th>
+              <th style={{ padding: 12, textAlign: 'center', color: '#ffe066' }}>Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {users.map(user => (
+              <tr key={user.id} style={{ borderBottom: '1px solid #333' }}>
+                <td style={{ padding: 12, wordBreak: 'break-all' }}>{user.email}</td>
+                <td style={{ padding: 12, textAlign: 'center' }}>
+                  <span style={{
+                    color: user.role === 'admin' ? '#ffe066' : '#10b981',
+                    fontWeight: user.role === 'admin' ? 700 : 500,
+                    background: user.role === 'admin' ? 'rgba(252,82,0,0.15)' : 'rgba(16,185,129,0.15)',
+                    padding: '4px 10px',
+                    borderRadius: 8
+                  }}>{user.role || 'user'}</span>
+                </td>
+                <td style={{ padding: 12, textAlign: 'center' }}>{user.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}</td>
+                <td style={{ padding: 12, textAlign: 'center' }}>{user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString() : '-'}</td>
+                <td style={{ padding: 12, textAlign: 'center' }}>{user.predictionCount}</td>
+                <td style={{ padding: 12, textAlign: 'center' }}>
+                  <button
+                    onClick={() => openPredictionsModal(user)}
+                    style={{
+                      background: '#10b981',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 8,
+                      padding: '6px 18px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontSize: 14
+                    }}
+                  >
+                    View Predictions
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {/* Modal for predictions */}
       {modalOpen && (
         <div style={{
@@ -136,40 +138,68 @@ const AdminDashboard = () => {
           <div style={{
             background: '#23272f',
             borderRadius: 16,
-            padding: 32,
-            minWidth: 350,
+            padding: 16,
+            minWidth: 0,
             maxWidth: 600,
-            width: '90%',
+            width: '95%',
             color: '#fff',
-            boxShadow: '0 4px 32px 0 #000a'
+            boxShadow: '0 4px 32px 0 #000a',
+            position: 'relative',
+            overflowX: 'auto'
           }}>
-            <h2 style={{ color: '#fc5200', marginBottom: 18 }}>Predictions for {modalUser?.email}</h2>
-            <button onClick={closeModal} style={{ position: 'absolute', top: 24, right: 32, background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer' }}>×</button>
+            <h2 style={{ color: '#fc5200', marginBottom: 18, fontSize: 20 }}>Predictions for {modalUser?.email}</h2>
+            <button onClick={closeModal} style={{ position: 'absolute', top: 12, right: 18, background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer' }}>×</button>
             {modalPredictions.length === 0 ? (
               <div style={{ color: '#ffe066', textAlign: 'center', marginTop: 30 }}>No predictions found.</div>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', background: '#181c24', borderRadius: 8, fontSize: 14 }}>
-                <thead>
-                  <tr>
-                    <th style={{ padding: 10, color: '#ffe066' }}>Race Type</th>
-                    <th style={{ padding: 10, color: '#ffe066' }}>Date</th>
-                    <th style={{ padding: 10, color: '#ffe066' }}>Result</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {modalPredictions.map(pred => (
-                    <tr key={pred.id} style={{ borderBottom: '1px solid #333' }}>
-                      <td style={{ padding: 10 }}>{pred.prediction?.raceEntries?.[0]?.distance || '-'}</td>
-                      <td style={{ padding: 10 }}>{pred.created_at ? new Date(pred.created_at).toLocaleDateString() : '-'}</td>
-                      <td style={{ padding: 10 }}>{pred.prediction?.results ? Object.values(pred.prediction.results).map((r, i) => <span key={i}>{r.time}{i < Object.values(pred.prediction.results).length - 1 ? ', ' : ''}</span>) : '-'}</td>
+              <div style={{ width: '100%', overflowX: 'auto' }}>
+                <table style={{ minWidth: 400, width: '100%', borderCollapse: 'collapse', background: '#181c24', borderRadius: 8, fontSize: 14 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ padding: 10, color: '#ffe066' }}>Race Type</th>
+                      <th style={{ padding: 10, color: '#ffe066' }}>Date</th>
+                      <th style={{ padding: 10, color: '#ffe066' }}>Result</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {modalPredictions.map(pred => (
+                      <tr key={pred.id} style={{ borderBottom: '1px solid #333' }}>
+                        <td style={{ padding: 10 }}>{pred.prediction?.raceEntries?.[0]?.distance || '-'}</td>
+                        <td style={{ padding: 10 }}>{pred.created_at ? new Date(pred.created_at).toLocaleDateString() : '-'}</td>
+                        <td style={{ padding: 10, wordBreak: 'break-all' }}>{pred.prediction?.results ? Object.values(pred.prediction.results).map((r, i) => <span key={i}>{r.time}{i < Object.values(pred.prediction.results).length - 1 ? ', ' : ''}</span>) : '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
       )}
+      <style>{`
+        @media (max-width: 700px) {
+          div[style*='maxWidth: 1000px'] {
+            padding: 8px !important;
+          }
+          table {
+            font-size: 13px !important;
+          }
+          th, td {
+            padding: 6px !important;
+          }
+          h1 {
+            font-size: 20px !important;
+          }
+        }
+        @media (max-width: 500px) {
+          div[style*='maxWidth: 1000px'] {
+            padding: 2px !important;
+          }
+          h1 {
+            font-size: 16px !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };
