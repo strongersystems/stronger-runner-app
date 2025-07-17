@@ -8,8 +8,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [savedPredictions, setSavedPredictions] = useState([]);
   const [showPredictionModal, setShowPredictionModal] = useState(false);
-  const [selectedPrediction, setSelectedPrediction] = useState(null);
   const [editMode, setEditMode] = useState(false);
+  const [selectedPrediction, setSelectedPrediction] = useState(null);
 
   const navigate = useNavigate();
 
@@ -81,10 +81,6 @@ const Dashboard = () => {
 
       setSavedPlans(plansWithAI);
       
-      // Calculate stats
-      const averageWeeklyTime = plansWithAI?.length ? 
-        plansWithAI.reduce((sum, plan) => sum + (plan.weekly_time || 0), 0) / plansWithAI.length : 0;
-
     } catch (error) {
       console.error('Error fetching plans:', error);
     } finally {
@@ -213,7 +209,7 @@ const Dashboard = () => {
                   <button
                     className="btn-secondary"
                     style={{ fontSize: 13, padding: '6px 16px', borderRadius: 6 }}
-                    onClick={() => navigate(`/predictor/${pred.id}`)}
+                    onClick={() => { setSelectedPrediction(pred); setShowPredictionModal(true); }}
                   >
                     View/Edit
                   </button>
@@ -458,18 +454,18 @@ const Dashboard = () => {
       </div>
 
       {/* Prediction Modal/Lightbox */}
-      {showPredictionModal && selectedPrediction && (
+      {showPredictionModal && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }} onClick={() => { setShowPredictionModal(false); setEditMode(false); }}>
+        }} onClick={() => { setShowPredictionModal(false); setEditMode(false); setSelectedPrediction(null); }}>
           <div style={{ background: '#23272f', borderRadius: 16, padding: 32, minWidth: 320, maxWidth: 420, color: 'var(--text-light)', position: 'relative' }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => { setShowPredictionModal(false); setEditMode(false); }} style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer' }}>×</button>
+            <button onClick={() => { setShowPredictionModal(false); setEditMode(false); setSelectedPrediction(null); }} style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer' }}>×</button>
             <h2 style={{ color: 'var(--neon-cyan)', marginBottom: 10 }}>{editMode ? 'Edit Prediction' : 'Prediction Details'}</h2>
             {/* Editable fields if in edit mode */}
             {editMode ? (
               <EditPredictionForm prediction={selectedPrediction} onSave={handleUpdatePrediction} onCancel={() => setEditMode(false)} />
             ) : (
-              <>
+              selectedPrediction && <>
                 <div style={{ marginBottom: 10, color: '#ffe066', fontWeight: 700 }}>
                   {selectedPrediction.prediction?.splitRace} ({selectedPrediction.prediction?.splitIsImperial ? 'mi' : 'km'})
                 </div>
@@ -496,7 +492,7 @@ const Dashboard = () => {
                   <button
                     className="btn"
                     style={{ fontSize: 16, padding: '8px 24px', borderRadius: 8, background: '#3b82f6', color: '#fff', fontWeight: 700, boxShadow: '0 2px 8px 0 rgba(59,130,246,0.15)', cursor: 'pointer' }}
-                    onClick={() => { setShowPredictionModal(false); navigate(`/predictor/${selectedPrediction.id}`); }}
+                    onClick={() => { setShowPredictionModal(false); setSelectedPrediction(null); navigate(`/predictor/${selectedPrediction.id}`); }}
                   >
                     View Splits
                   </button>
