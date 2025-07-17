@@ -44,7 +44,6 @@ const Predictor = () => {
 
   // Add state for info modal
   const [infoModal, setInfoModal] = useState({ open: false, distance: null });
-  const [perfModal, setPerfModal] = useState({ open: false, text: '' });
 
   // Helper for updating a race entry inline
   const updateRaceEntry = (idx, field, value) => {
