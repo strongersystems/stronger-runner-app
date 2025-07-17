@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import supabase from '../supabaseClient';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaInfoCircle } from 'react-icons/fa';
@@ -35,6 +35,14 @@ const Predictor = () => {
   // Add state for info modal
   const [infoModal, setInfoModal] = useState({ open: false, distance: null });
   const [perfModal, setPerfModal] = useState({ open: false, text: '' });
+  // Robust isMobile state
+  const getIsMobile = () => typeof window !== 'undefined' && window.innerWidth <= 700;
+  const [isMobile, setIsMobile] = useState(getIsMobile());
+  useEffect(() => {
+    const handleResize = () => setIsMobile(getIsMobile());
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Helper for updating a race entry inline
   const updateRaceEntry = (idx, field, value) => {
@@ -106,23 +114,100 @@ const Predictor = () => {
       'Half Marathon': 'Half Marathon',
       'Marathon': 'Marathon',
     };
+    if (isMobile) {
+      // MOBILE: 3 columns, performance icon under Actual Time
+      return (
+        <div style={{ width: '100%' }}>
+          <table className="results-table-mobile" style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', marginTop: '20px', color: '#f8f8f8', background: 'var(--dark-bg)', borderRadius: 12, overflow: 'hidden' }}>
+            <colgroup>
+              <col style={{ width: '33%' }} />
+              <col style={{ width: '33%' }} />
+              <col style={{ width: '34%' }} />
+            </colgroup>
+            <thead>
+              <tr>
+                <th style={{ height: 44, padding: '10px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 15, borderBottom: '2px solid #333', verticalAlign: 'middle' }}>Distance</th>
+                <th style={{ height: 44, padding: '10px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 15, borderBottom: '2px solid #333', verticalAlign: 'middle' }}>Actual Time</th>
+                <th style={{ height: 44, padding: '10px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 15, borderBottom: '2px solid #333', verticalAlign: 'middle' }}>Predicted Time <FaInfoCircle style={{ cursor: 'pointer', color: '#10b981' }} title="How is this calculated?" onClick={() => setInfoModal({ open: true, distance: 'Predicted' })} /></th>
+              </tr>
+            </thead>
+            <tbody>
+              {standardDistances.map((dist, index) => {
+                const result = results[dist] || {};
+                let perf = null, perfIcon = '', perfText = '', color = '#888';
+                if (result.actual && result.predicted) {
+                  const diff = (result.actual - result.predicted) / result.predicted;
+                  if (diff < -0.08) { perfIcon = '🚀'; perfText = 'Way Faster than Predicted'; color = '#00ff6a'; }
+                  else if (diff < -0.05) { perfIcon = '↑'; perfText = 'Faster than Predicted'; color = '#1ed760'; }
+                  else if (diff < -0.04) { perfIcon = '↗'; perfText = 'Within Range, Outperforming'; color = '#00bfae'; }
+                  else if (diff < 0) { perfIcon = '↗'; perfText = 'Within Range, Slightly Faster'; color = '#ffe066'; }
+                  else if (diff < 0.04) { perfIcon = '↘'; perfText = 'Within Range, Slightly Slower'; color = '#ffe066'; }
+                  else if (diff < 0.05) { perfIcon = '↘'; perfText = 'Within Range, Slightly Slower'; color = '#ffb347'; }
+                  else if (diff < 0.08) { perfIcon = '↓'; perfText = 'Slower than Predicted'; color = '#e4572e'; }
+                  else { perfIcon = '🛑'; perfText = 'Much Slower than Predicted'; color = '#b30000'; }
+                  perf = (
+                    <span
+                      style={{ background: color, color: '#222', borderRadius: 16, padding: '2px 10px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 15, margin: 0, cursor: 'pointer' }}
+                      onClick={() => setPerfModal({ open: true, text: perfText })}
+                      title={perfText}
+                    >
+                      <span style={{ fontSize: 18 }}>{perfIcon}</span>
+                    </span>
+                  );
+                }
+                return (
+                  <tr key={dist} style={{ background: index % 2 === 0 ? '#23272f' : '#181c24', color: '#f8f8f8', fontSize: 14, height: 44 }}>
+                    <td style={{ padding: '10px', textAlign: 'center', fontWeight: 700, verticalAlign: 'middle', height: 44 }}>{distanceLabels[dist]}</td>
+                    <td style={{ padding: '10px', textAlign: 'center', color: '#ffe066', fontWeight: 700, verticalAlign: 'middle', height: 44 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                        <span style={{ fontSize: 15, fontWeight: 700 }}>{result.actual ? secondsToTime(result.actual) : '-'}</span>
+                        {perf && <span style={{ marginTop: 2 }}>{perf}</span>}
+                      </div>
+                    </td>
+                    <td style={{ padding: '10px', textAlign: 'center', color: '#6ec1e4', fontWeight: 700, position: 'relative', verticalAlign: 'middle', height: 44 }}>
+                      {result.predicted ? (
+                        <>
+                          <span style={{ fontSize: 15, fontWeight: 700 }}>{secondsToTime(result.predicted)}</span>
+                          <FaInfoCircle style={{ cursor: 'pointer', color: '#10b981', marginLeft: 6 }} title="How is this calculated?" onClick={() => setInfoModal({ open: true, distance: dist })} />
+                          <div style={{ color: '#b388ff', fontWeight: 500, fontSize: 12, marginTop: 2 }}>
+                            ({secondsToTime(result.predicted * 0.96)} - {secondsToTime(result.predicted * 1.04)})
+                          </div>
+                        </>
+                      ) : '-'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {/* Mobile performance info modal */}
+          {perfModal.open && (
+            <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, background: '#23272f', color: '#fff', padding: 18, borderTopLeftRadius: 16, borderTopRightRadius: 16, boxShadow: '0 -2px 16px #000a', zIndex: 2000, textAlign: 'center' }} onClick={() => setPerfModal({ open: false, text: '' })}>
+              <span style={{ fontSize: 18 }}>{perfModal.text}</span>
+              <div style={{ marginTop: 10, color: '#10b981', fontSize: 15 }}>(Tap anywhere to close)</div>
+            </div>
+          )}
+        </div>
+      );
+    }
+    // DESKTOP: original 5-column table
     return (
       <div style={{ width: '100%' }}>
-        <table className="results-table" style={{ minWidth: 600, width: '100%', borderCollapse: 'collapse', marginTop: '20px', animation: 'fadeIn 1s ease-in', color: '#f8f8f8', background: 'var(--dark-bg)', borderRadius: 12, overflow: 'hidden', tableLayout: 'fixed' }}>
+        <table className="results-table-desktop" style={{ minWidth: 600, width: '100%', borderCollapse: 'collapse', marginTop: '20px', animation: 'fadeIn 1s ease-in', color: '#f8f8f8', background: 'var(--dark-bg)', borderRadius: 12, overflow: 'hidden', tableLayout: 'fixed' }}>
           <colgroup>
-            <col style={{ width: '33%' }} />
-            <col style={{ width: '33%' }} />
-            <col style={{ width: '34%' }} />
-            <col className="col-range" />
-            <col className="col-performance" />
+            <col style={{ width: '20%' }} />
+            <col style={{ width: '20%' }} />
+            <col style={{ width: '20%' }} />
+            <col style={{ width: '20%' }} />
+            <col style={{ width: '20%' }} />
           </colgroup>
           <thead>
             <tr>
-              <th className="col-distance" style={{ height: 48, padding: '12px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 16, borderBottom: '2px solid #333', verticalAlign: 'middle' }}>Distance</th>
-              <th className="col-actual" style={{ height: 48, padding: '12px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 16, borderBottom: '2px solid #333', verticalAlign: 'middle' }}>Actual Time</th>
-              <th className="col-predicted" style={{ height: 48, padding: '12px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 16, borderBottom: '2px solid #333', verticalAlign: 'middle' }}>Predicted Time <FaInfoCircle style={{ cursor: 'pointer', color: '#10b981' }} title="How is this calculated?" onClick={() => setInfoModal({ open: true, distance: 'Predicted' })} /></th>
-              <th className="col-range" style={{ height: 48, padding: '12px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 16, borderBottom: '2px solid #333', verticalAlign: 'middle' }}>Range (±4%)</th>
-              <th className="col-performance" style={{ height: 48, padding: '12px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 16, borderBottom: '2px solid #333', verticalAlign: 'middle' }}>Performance</th>
+              <th style={{ height: 48, padding: '12px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 16, borderBottom: '2px solid #333', verticalAlign: 'middle' }}>Distance</th>
+              <th style={{ height: 48, padding: '12px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 16, borderBottom: '2px solid #333', verticalAlign: 'middle' }}>Actual Time</th>
+              <th style={{ height: 48, padding: '12px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 16, borderBottom: '2px solid #333', verticalAlign: 'middle' }}>Predicted Time <FaInfoCircle style={{ cursor: 'pointer', color: '#10b981' }} title="How is this calculated?" onClick={() => setInfoModal({ open: true, distance: 'Predicted' })} /></th>
+              <th style={{ height: 48, padding: '12px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 16, borderBottom: '2px solid #333', verticalAlign: 'middle' }}>Range (±4%)</th>
+              <th style={{ height: 48, padding: '12px', textAlign: 'center', background: '#23272f', color: '#fff', fontWeight: 800, fontSize: 16, borderBottom: '2px solid #333', verticalAlign: 'middle' }}>Performance</th>
             </tr>
           </thead>
           <tbody>
@@ -140,39 +225,26 @@ const Predictor = () => {
                 else if (diff < 0.08) { perfIcon = '↓'; perfText = 'Slower than Predicted'; color = '#e4572e'; }
                 else { perfIcon = '🛑'; perfText = 'Much Slower than Predicted'; color = '#b30000'; }
                 perf = (
-                  <span
-                    className="mobile-perf-icon"
-                    style={{ background: color, color: '#222', borderRadius: 16, padding: '2px 10px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 15, margin: 0, cursor: 'pointer' }}
-                    onClick={() => setPerfModal({ open: true, text: perfText })}
-                    title={perfText}
-                  >
-                    <span style={{ fontSize: 18 }}>{perfIcon}</span>
+                  <span title={perfText} style={{ background: color, color: '#222', borderRadius: 16, padding: '4px 14px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 15 }}>
+                    <span style={{ fontSize: 18 }}>{perfIcon}</span> {perfText}
                   </span>
                 );
-              } // else leave perf as null (blank cell)
+              }
               return (
                 <React.Fragment key={dist}>
                   <tr style={{ background: index % 2 === 0 ? '#23272f' : '#181c24', color: '#f8f8f8', fontSize: 16, height: 56 }}>
-                    <td className="col-distance" style={{ padding: '12px', textAlign: 'center', fontWeight: 700, verticalAlign: 'middle', height: 56 }}>{distanceLabels[dist]}</td>
-                    <td className="col-actual" style={{ padding: '12px', textAlign: 'center', color: '#ffe066', fontWeight: 700, verticalAlign: 'middle', height: 56 }}>
-                      <div className="mobile-actual-flex" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                        <span style={{ fontSize: 15, fontWeight: 700 }}>{result.actual ? secondsToTime(result.actual) : '-'}</span>
-                        <span className="mobile-perf-row" style={{ display: 'none', justifyContent: 'center', alignItems: 'center', margin: 0, gap: 0 }}>{perf}</span>
-                      </div>
-                    </td>
-                    <td className="col-predicted" style={{ padding: '12px', textAlign: 'center', color: '#6ec1e4', fontWeight: 700, position: 'relative', verticalAlign: 'middle', height: 56 }}>
+                    <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700, verticalAlign: 'middle', height: 56 }}>{distanceLabels[dist]}</td>
+                    <td style={{ padding: '12px', textAlign: 'center', color: '#ffe066', fontWeight: 700, verticalAlign: 'middle', height: 56 }}>{result.actual ? secondsToTime(result.actual) : '-'}</td>
+                    <td style={{ padding: '12px', textAlign: 'center', color: '#6ec1e4', fontWeight: 700, position: 'relative', verticalAlign: 'middle', height: 56 }}>
                       {result.predicted ? (
                         <>
                           <span style={{ fontSize: 15, fontWeight: 700 }}>{secondsToTime(result.predicted)}</span>
                           <FaInfoCircle style={{ cursor: 'pointer', color: '#10b981', marginLeft: 6 }} title="How is this calculated?" onClick={() => setInfoModal({ open: true, distance: dist })} />
-                          <div className="mobile-range" style={{ color: '#b388ff', fontWeight: 500, fontSize: 12, marginTop: 2, display: 'none' }}>
-                            ({secondsToTime(result.predicted * 0.96)} - {secondsToTime(result.predicted * 1.04)})
-                          </div>
                         </>
                       ) : '-'}
                     </td>
-                    <td className="col-range" style={{ padding: '12px', textAlign: 'center', color: '#b388ff', fontWeight: 700, verticalAlign: 'middle', height: 56 }}>{result.predicted ? `${secondsToTime(result.predicted * 0.96)} - ${secondsToTime(result.predicted * 1.04)}` : '-'}</td>
-                    <td className="col-performance" style={{ padding: '12px', textAlign: 'center', verticalAlign: 'middle', height: 56 }}>{perf}</td>
+                    <td style={{ padding: '12px', textAlign: 'center', color: '#b388ff', fontWeight: 700, verticalAlign: 'middle', height: 56 }}>{result.predicted ? `${secondsToTime(result.predicted * 0.96)} - ${secondsToTime(result.predicted * 1.04)}` : '-'}</td>
+                    <td style={{ padding: '12px', textAlign: 'center', verticalAlign: 'middle', height: 56 }}>{perf}</td>
                   </tr>
                   {/* Show warning row only after Marathon if Mile is entered */}
                   {hasMile && dist === 'Marathon' && (
@@ -187,47 +259,6 @@ const Predictor = () => {
             })}
           </tbody>
         </table>
-        {/* Mobile performance info modal */}
-        {perfModal.open && (
-          <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, background: '#23272f', color: '#fff', padding: 18, borderTopLeftRadius: 16, borderTopRightRadius: 16, boxShadow: '0 -2px 16px #000a', zIndex: 2000, textAlign: 'center' }} onClick={() => setPerfModal({ open: false, text: '' })}>
-            <span style={{ fontSize: 18 }}>{perfModal.text}</span>
-            <div style={{ marginTop: 10, color: '#10b981', fontSize: 15 }}>(Tap anywhere to close)</div>
-          </div>
-        )}
-        <style>{`
-          @media (max-width: 700px) {
-            .results-table th.col-range,
-            .results-table td.col-range,
-            .results-table th.col-performance,
-            .results-table td.col-performance {
-              display: none !important;
-            }
-            .results-table .mobile-range {
-              display: block !important;
-            }
-            .results-table .mobile-perf-row {
-              display: flex !important;
-              margin-top: 2px !important;
-              gap: 0 !important;
-            }
-            .results-table .mobile-actual-flex {
-              display: flex !important;
-              flex-direction: column !important;
-              align-items: center !important;
-              justify-content: center !important;
-              height: 40px !important;
-            }
-            .results-table th, .results-table td {
-              font-size: 13px !important;
-              padding: 8px !important;
-              height: 40px !important;
-              vertical-align: middle !important;
-            }
-            .results-table {
-              min-width: 0 !important;
-            }
-          }
-        `}</style>
       </div>
     );
   };
