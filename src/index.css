@@ -152,3 +152,116 @@ input:focus, select:focus, textarea:focus {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--light-bg);
 } 
+
+/* Mobile optimization for Predictor page */
+@media (max-width: 600px) {
+  .card {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 10px !important;
+    box-sizing: border-box;
+  }
+  table {
+    font-size: 13px !important;
+    min-width: 500px;
+    width: 100%;
+    display: block;
+    overflow-x: auto;
+    border-radius: 8px !important;
+  }
+  thead, tbody, tr {
+    display: table;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  th, td {
+    padding: 6px !important;
+    font-size: 13px !important;
+  }
+  form {
+    padding: 10px !important;
+  }
+  select, input[type="text"], input[type="email"], input[type="password"] {
+    font-size: 16px !important;
+    padding: 10px !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    margin-bottom: 8px;
+  }
+  button.btn, button[type="button"], button[type="submit"] {
+    width: 100% !important;
+    font-size: 16px !important;
+    padding: 12px !important;
+    margin-bottom: 8px;
+  }
+  .card .card {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    max-width: 100% !important;
+  }
+  .card h3, .card h2, .card h1 {
+    font-size: 18px !important;
+  }
+  .card label {
+    font-size: 14px !important;
+  }
+  .card .btn-secondary, .card .btn {
+    width: 100% !important;
+    margin-bottom: 8px;
+  }
+  .card .btn-secondary svg, .card .btn svg {
+    font-size: 18px !important;
+  }
+  .card .btn-secondary {
+    min-width: 40px;
+    min-height: 40px;
+  }
+} 
+
+/* Improved contrast for time input card and fields */
+.card.time-input-card {
+  background: #23272f !important;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.10);
+}
+.card.time-input-card form {
+  background: #23272f !important;
+}
+.card.time-input-card input,
+.card.time-input-card select {
+  background: #2d3340 !important;
+  color: #e0e6ed !important;
+  border: 1px solid #444a5a !important;
+  font-weight: 600;
+  transition: border 0.2s;
+}
+.card.time-input-card input:focus,
+.card.time-input-card select:focus {
+  border: 2px solid #fc5200 !important;
+  outline: none;
+  background: #313846 !important;
+}
+.card.time-input-card label {
+  color: #e0e6ed !important;
+  font-weight: 700;
+}
+.card.time-input-card .btn,
+.card.time-input-card .btn-secondary {
+  background: #fc5200 !important;
+  color: #fff !important;
+  border: none !important;
+}
+.card.time-input-card .btn:active,
+.card.time-input-card .btn-secondary:active {
+  background: #d84315 !important;
+}
+
+@media (max-width: 600px) {
+  .card.time-input-card {
+    padding: 6px !important;
+  }
+  .card.time-input-card input,
+  .card.time-input-card select {
+    font-size: 16px !important;
+    padding: 10px !important;
+  }
+} 

@@ -6,11 +6,6 @@ const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [savedPlans, setSavedPlans] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    totalPlans: 0,
-    totalMileage: 0,
-    averageWeeklyTime: 0
-  });
   const [savedPredictions, setSavedPredictions] = useState([]);
   const [showPredictionModal, setShowPredictionModal] = useState(false);
   const [selectedPrediction, setSelectedPrediction] = useState(null);
@@ -92,11 +87,6 @@ const Dashboard = () => {
       const averageWeeklyTime = plansWithAI?.length ? 
         plansWithAI.reduce((sum, plan) => sum + (plan.weekly_time || 0), 0) / plansWithAI.length : 0;
 
-      setStats({
-        totalPlans,
-        totalMileage,
-        averageWeeklyTime: Math.round(averageWeeklyTime)
-      });
     } catch (error) {
       console.error('Error fetching plans:', error);
     } finally {
@@ -225,24 +215,34 @@ const Dashboard = () => {
                   <button
                     className="btn-secondary"
                     style={{ fontSize: 13, padding: '6px 16px', borderRadius: 6 }}
-                    onClick={() => { setSelectedPrediction(pred); setShowPredictionModal(true); }}
-                  >
-                    View
-                  </button>
-                  <button
-                    className="btn-secondary"
-                    style={{ fontSize: 13, padding: '6px 16px', borderRadius: 6 }}
                     onClick={() => navigate(`/predictor/${pred.id}`)}
                   >
-                    Edit
+                    View/Edit
                   </button>
                   <button
                     className="btn-secondary"
-                    style={{ fontSize: 13, padding: '6px 10px', borderRadius: 6, background: '#ef4444', color: '#fff', display: 'inline-flex', alignItems: 'center' }}
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      background: '#23272f',
+                      color: '#fc5200',
+                      border: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 20,
+                      transition: 'background 0.2s, color 0.2s',
+                      cursor: 'pointer',
+                    }}
                     title="Delete Prediction"
                     onClick={() => handleDeletePrediction(pred.id)}
+                    onMouseOver={e => { e.currentTarget.style.background = '#fc5200'; e.currentTarget.style.color = '#fff'; }}
+                    onMouseOut={e => { e.currentTarget.style.background = '#23272f'; e.currentTarget.style.color = '#fc5200'; }}
                   >
-                    <span style={{ fontSize: 18 }}>🗑️</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M3 6h18v2H3V6zm2 3h14l-1.5 12.5c-.1.8-.8 1.5-1.6 1.5H8.1c-.8 0-1.5-.7-1.6-1.5L5 9zm5 2v8h2v-8h-2zm4 0v8h2v-8h-2zm-8 0v8h2v-8H6z"/>
+                    </svg>
                   </button>
                 </div>
               </div>

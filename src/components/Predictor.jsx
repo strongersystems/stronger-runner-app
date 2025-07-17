@@ -1,8 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import supabase from '../supabaseClient';
 import { useParams, useNavigate } from 'react-router-dom';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceArea } from 'recharts';
-import { ScatterChart, Scatter, ErrorBar } from 'recharts';
 import { FaInfoCircle } from 'react-icons/fa';
 
 const Predictor = () => {
@@ -517,7 +515,7 @@ const Predictor = () => {
 
   // UI for entering/editing recent times as editable rows
   const renderRaceEntryRows = () => (
-    <div className="card" style={{ marginBottom: 20, color: 'var(--text-light)' }}>
+    <div className="card time-input-card" style={{ marginBottom: 20, color: 'var(--text-light)' }}>
       <h3 style={{ color: '#fc5200', marginBottom: 18, fontWeight: 700, fontSize: 22, textAlign: 'center' }}>Enter Recent Times</h3>
       <form style={{
         display: 'flex',
