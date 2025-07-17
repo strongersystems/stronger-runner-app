@@ -226,14 +226,6 @@ const Predictor = () => {
     </div>
   );
 
-  // Add a renderResultsTable function that returns both tables
-  const renderResultsTable = () => (
-    <>
-      {renderResultsTableDesktop()}
-      {renderResultsListMobile()}
-    </>
-  );
-
   // Helper to format seconds as HH:MM:SS
   const formatSecondsToHHMMSS = (seconds) => {
     const h = Math.floor(seconds / 3600);
