@@ -527,32 +527,41 @@ const Predictor = () => {
               <option value="Marathon">Marathon</option>
             </select>
             {/* Hours */}
-            <select
-              value={entry.h}
-              onChange={e => updateRaceEntry(idx, 'h', parseInt(e.target.value))}
-              style={{ width: 70, border: 'none', borderRadius: 8, background: 'var(--medium-bg)', color: 'var(--text-light)', fontSize: 18, textAlign: 'center', height: 48, fontWeight: 500, outline: 'none', boxShadow: '0 1px 4px 0 rgba(0,0,0,0.06)', padding: '0 8px' }}
-            >
-              {Array.from({ length: 11 }, (_, i) => <option key={i} value={i}>{i}</option>)}
-            </select>
-            <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>h</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <label htmlFor={`h-${idx}`} style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: 14, marginBottom: 2 }}>h</label>
+              <select
+                id={`h-${idx}`}
+                value={entry.h}
+                onChange={e => updateRaceEntry(idx, 'h', parseInt(e.target.value))}
+                style={{ width: 70, border: 'none', borderRadius: 8, background: 'var(--medium-bg)', color: 'var(--text-light)', fontSize: 18, textAlign: 'center', height: 48, fontWeight: 500, outline: 'none', boxShadow: '0 1px 4px 0 rgba(0,0,0,0.06)', padding: '0 8px' }}
+              >
+                {Array.from({ length: 11 }, (_, i) => <option key={i} value={i}>{i}</option>)}
+              </select>
+            </div>
             {/* Minutes */}
-            <select
-              value={entry.m}
-              onChange={e => updateRaceEntry(idx, 'm', parseInt(e.target.value))}
-              style={{ width: 70, border: 'none', borderRadius: 8, background: 'var(--medium-bg)', color: 'var(--text-light)', fontSize: 18, textAlign: 'center', height: 48, fontWeight: 500, outline: 'none', boxShadow: '0 1px 4px 0 rgba(0,0,0,0.06)', padding: '0 8px' }}
-            >
-              {Array.from({ length: 60 }, (_, i) => <option key={i} value={i}>{i}</option>)}
-            </select>
-            <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>m</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <label htmlFor={`m-${idx}`} style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: 14, marginBottom: 2 }}>m</label>
+              <select
+                id={`m-${idx}`}
+                value={entry.m}
+                onChange={e => updateRaceEntry(idx, 'm', parseInt(e.target.value))}
+                style={{ width: 70, border: 'none', borderRadius: 8, background: 'var(--medium-bg)', color: 'var(--text-light)', fontSize: 18, textAlign: 'center', height: 48, fontWeight: 500, outline: 'none', boxShadow: '0 1px 4px 0 rgba(0,0,0,0.06)', padding: '0 8px' }}
+              >
+                {Array.from({ length: 60 }, (_, i) => <option key={i} value={i}>{i}</option>)}
+              </select>
+            </div>
             {/* Seconds */}
-            <select
-              value={entry.s}
-              onChange={e => updateRaceEntry(idx, 's', parseInt(e.target.value))}
-              style={{ width: 70, border: 'none', borderRadius: 8, background: 'var(--medium-bg)', color: 'var(--text-light)', fontSize: 18, textAlign: 'center', height: 48, fontWeight: 500, outline: 'none', boxShadow: '0 1px 4px 0 rgba(0,0,0,0.06)', padding: '0 8px' }}
-            >
-              {Array.from({ length: 60 }, (_, i) => <option key={i} value={i}>{i}</option>)}
-            </select>
-            <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>s</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <label htmlFor={`s-${idx}`} style={{ color: 'var(--text-muted)', fontWeight: 600, fontSize: 14, marginBottom: 2 }}>s</label>
+              <select
+                id={`s-${idx}`}
+                value={entry.s}
+                onChange={e => updateRaceEntry(idx, 's', parseInt(e.target.value))}
+                style={{ width: 70, border: 'none', borderRadius: 8, background: 'var(--medium-bg)', color: 'var(--text-light)', fontSize: 18, textAlign: 'center', height: 48, fontWeight: 500, outline: 'none', boxShadow: '0 1px 4px 0 rgba(0,0,0,0.06)', padding: '0 8px' }}
+              >
+                {Array.from({ length: 60 }, (_, i) => <option key={i} value={i}>{i}</option>)}
+              </select>
+            </div>
             {/* Remove Button */}
             {raceEntries.length > 1 && (
               <button type="button" onClick={() => removeRaceEntry(idx)} style={{ marginLeft: 10, background: 'none', border: 'none', color: '#fc5200', fontWeight: 700, fontSize: 18, cursor: 'pointer', borderRadius: 6, padding: '6px 12px', transition: 'background 0.2s' }}>Remove</button>
