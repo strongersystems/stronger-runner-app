@@ -437,35 +437,6 @@ const Predictor = () => {
 
   const fatigueFactor = 1.06;
 
-  // Helper to prepare data for the chart
-  const getChartData = () => {
-    const standardDistances = ['1 Mile', '5K', '10K', 'Half Marathon', 'Marathon'];
-    return standardDistances.map(dist => {
-      const res = results[dist] || {};
-      return {
-        name: dist,
-        Actual: res.actual ? Math.round(res.actual) : null,
-        Predicted: res.predicted ? Math.round(res.predicted) : null,
-        Lower: res.lower ? Math.round(res.lower) : null,
-        Upper: res.upper ? Math.round(res.upper) : null,
-      };
-    });
-  };
-
-  // Helper to prepare scatter data for the chart
-  const getScatterData = () => {
-    const standardDistances = ['1 Mile', '5K', '10K', 'Half Marathon', 'Marathon'];
-    return standardDistances.map(dist => {
-      const res = results[dist] || {};
-      return {
-        name: dist,
-        Predicted: res.predicted ? Math.round(res.predicted) : null,
-        Actual: res.actual ? Math.round(res.actual) : null,
-        Error: res.predicted ? [Math.round(res.predicted * 0.04), Math.round(res.predicted * 0.04)] : [0, 0],
-      };
-    });
-  };
-
   const handleSavePrediction = async () => {
     setSaveStatus('');
     // Get user

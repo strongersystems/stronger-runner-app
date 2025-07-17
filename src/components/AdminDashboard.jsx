@@ -29,7 +29,6 @@ const fetchPredictionsForUser = async (userId) => {
 const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalUser, setModalUser] = useState(null);
   const [modalPredictions, setModalPredictions] = useState([]);
@@ -38,7 +37,6 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUser(user);
       const isAdmin = user?.user_metadata?.role === 'admin' || user?.raw_user_meta_data?.role === 'admin';
       if (!user || !isAdmin) {
         navigate('/dashboard');

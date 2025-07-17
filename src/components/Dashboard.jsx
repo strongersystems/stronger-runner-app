@@ -82,8 +82,6 @@ const Dashboard = () => {
       setSavedPlans(plansWithAI);
       
       // Calculate stats
-      const totalPlans = plansWithAI?.length || 0;
-      const totalMileage = plansWithAI?.reduce((sum, plan) => sum + (plan.weekly_mileage || 0), 0) || 0;
       const averageWeeklyTime = plansWithAI?.length ? 
         plansWithAI.reduce((sum, plan) => sum + (plan.weekly_time || 0), 0) / plansWithAI.length : 0;
 
